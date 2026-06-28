@@ -11,73 +11,67 @@ os.makedirs(DATA_DIR, exist_ok=True)
 def load_suppliers():
     if not os.path.exists(SUPPLIERS_FILE):
         df = pd.DataFrame(columns=[
-            "codigo",
-            "fornecedor",
-            "cnpj",
-            "telefone",
-            "email",
-            "cidade",
-            "estado",
-            "observacao"
+            "codigo", "fornecedor", "cnpj", "telefone",
+            "email", "cidade", "estado", "observacao"
         ])
         df.to_excel(SUPPLIERS_FILE, index=False)
         return df
 
     df = pd.read_excel(SUPPLIERS_FILE)
 
-    required_cols = [
-        "codigo",
-        "fornecedor",
-        "cnpj",
-        "telefone",
-        "email",
-        "cidade",
-        "estado",
-        "observacao"
+    cols = [
+        "codigo", "fornecedor", "cnpj", "telefone",
+        "email", "cidade", "estado", "observacao"
     ]
 
-    for col in required_cols:
+    for col in cols:
         if col not in df.columns:
             df[col] = ""
 
-    return df[required_cols]
+    return df[cols]
 
 
 def save_suppliers(df):
     df.to_excel(SUPPLIERS_FILE, index=False)
 
 
-def render_suppliers():
-    st.markdown("## 🏭 Fornecedores")
+def supplier_options():
+    df = load_suppliers()
+    if len(df) == 0:
+        return ["Não informado"]
 
-    fornecedores = load_suppliers()
+    fornecedores = df["fornecedor"].dropna().astype(str).tolist()
+    fornecedores = [f for f in fornecedores if f.strip() != ""]
+    fornecedores = sorted(list(set(fornecedores)))
 
-    st.markdown("### ➕ Cadastrar fornecedor")
+    if len(fornecedores) == 0:
+        return ["Não informado"]
 
-    with st.expander("Novo fornecedor", expanded=True):
-        col1, col2 = st.columns(2)
+    return fornecedores
 
-        with col1:
-            fornecedor = st.text_input("Nome do fornecedor")
-            cnpj = st.text_input("CNPJ")
-            telefone = st.text_input("Telefone")
-            email = st.text_input("E-mail")
 
-        with col2:
-            cidade = st.text_input("Cidade")
-            estado = st.text_input("Estado / UF")
-            observacao = st.text_area("Observação")
+def supplier_form_inline():
+    with st.expander("➕ Novo fornecedor"):
+        fornecedor = st.text_input("Nome do fornecedor", key="forn_inline_nome")
+        cnpj = st.text_input("CNPJ", key="forn_inline_cnpj")
+        telefone = st.text_input("Telefone", key="forn_inline_tel")
+        email = st.text_input("E-mail", key="forn_inline_email")
+        cidade = st.text_input("Cidade", key="forn_inline_cidade")
+        estado = st.text_input("Estado / UF", key="forn_inline_estado")
+        observacao = st.text_area("Observação", key="forn_inline_obs")
 
-        if st.button("💾 Salvar fornecedor"):
+        if st.button("💾 Salvar fornecedor", key="btn_salvar_fornecedor_inline"):
             if fornecedor.strip() == "":
                 st.warning("Informe o nome do fornecedor.")
             else:
+                df = load_suppliers()
+
                 novo_codigo = 1
-                if len(fornecedores) > 0:
+                if len(df) > 0:
                     try:
-                        novo_codigo = int(fornecedores["codigo"].max()) + 1
+                        novo_codigo = int(pd.to_numeric(df["codigo"], errors="coerce").max()) + 1
                     except:
-                        novo_codigo = len(fornecedores) + 1
+                        novo_codigo = len(df) + 1
 
                 novo = pd.DataFrame([{
                     "codigo": novo_codigo,
@@ -90,16 +84,23 @@ def render_suppliers():
                     "observacao": observacao.strip()
                 }])
 
-                fornecedores = pd.concat([fornecedores, novo], ignore_index=True)
-                fornecedores = fornecedores.drop_duplicates(subset=["fornecedor"], keep="last")
-
-                save_suppliers(fornecedores)
+                df = pd.concat([df, novo], ignore_index=True)
+                df = df.drop_duplicates(subset=["fornecedor"], keep="last")
+                save_suppliers(df)
 
                 st.success("Fornecedor cadastrado com sucesso!")
                 st.rerun()
 
+
+def render_suppliers():
+    st.markdown("## 🏭 Fornecedores")
+
+    supplier_form_inline()
+
     st.markdown("---")
     st.markdown("### 🔍 Consultar fornecedores")
+
+    fornecedores = load_suppliers()
 
     busca = st.text_input("Buscar por nome, CNPJ, telefone ou cidade")
 
@@ -114,18 +115,6 @@ def render_suppliers():
         filtrado = fornecedores
 
     st.dataframe(filtrado, use_container_width=True)
-
-    st.markdown("---")
-    st.markdown("### ⬇️ Exportar fornecedores")
-
-    fornecedores.to_excel("fornecedores_tigrao.xlsx", index=False)
-
-    with open("fornecedores_tigrao.xlsx", "rb") as f:
-        st.download_button(
-            "Baixar fornecedores em Excel",
-            f,
-            file_name="fornecedores_tigrao.xlsx"
-        )
 
 
 def show_suppliers():
