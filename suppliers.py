@@ -7,66 +7,49 @@ SUPPLIERS_FILE = os.path.join(DATA_DIR, "fornecedores.xlsx")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
+COLS = [
+    "codigo",
+    "fornecedor",
+    "cnpj",
+    "ie",
+    "telefone",
+    "whatsapp",
+    "email",
+    "contato",
+    "cidade",
+    "estado",
+    "observacao"
+]
+
 
 def load_suppliers():
     if not os.path.exists(SUPPLIERS_FILE):
-        df = pd.DataFrame(columns=[
-            "codigo",
-            "fornecedor",
-            "cnpj",
-            "ie",
-            "telefone",
-            "whatsapp",
-            "email",
-            "contato",
-            "cidade",
-            "estado",
-            "observacao"
-        ])
+        df = pd.DataFrame(columns=COLS)
         df.to_excel(SUPPLIERS_FILE, index=False)
         return df
 
     df = pd.read_excel(SUPPLIERS_FILE)
 
-    required_cols = [
-        "codigo",
-        "fornecedor",
-        "cnpj",
-        "ie",
-        "telefone",
-        "whatsapp",
-        "email",
-        "contato",
-        "cidade",
-        "estado",
-        "observacao"
-    ]
-
-    for col in required_cols:
+    for col in COLS:
         if col not in df.columns:
             df[col] = ""
 
-    return df[required_cols]
+    df = df[COLS]
+    df = df.fillna("")
+    return df
 
 
 def save_suppliers(df):
+    df = df[COLS].fillna("")
     df.to_excel(SUPPLIERS_FILE, index=False)
 
 
 def supplier_options():
     df = load_suppliers()
-
-    if len(df) == 0:
-        return ["Não informado"]
-
     fornecedores = df["fornecedor"].dropna().astype(str).tolist()
     fornecedores = [f for f in fornecedores if f.strip() != ""]
     fornecedores = sorted(list(set(fornecedores)))
-
-    if len(fornecedores) == 0:
-        return ["Não informado"]
-
-    return fornecedores
+    return fornecedores if fornecedores else ["Não informado"]
 
 
 def supplier_form_inline(prefix="suppliers"):
@@ -96,10 +79,8 @@ def supplier_form_inline(prefix="suppliers"):
 
             novo_codigo = 1
             if len(df) > 0:
-                try:
-                    novo_codigo = int(pd.to_numeric(df["codigo"], errors="coerce").max()) + 1
-                except Exception:
-                    novo_codigo = len(df) + 1
+                codigos = pd.to_numeric(df["codigo"], errors="coerce").fillna(0)
+                novo_codigo = int(codigos.max()) + 1
 
             novo = pd.DataFrame([{
                 "codigo": novo_codigo,
@@ -128,6 +109,52 @@ def render_suppliers():
     st.markdown("## 🏭 Fornecedores")
 
     supplier_form_inline("suppliers")
+
+    st.markdown("---")
+    st.markdown("### ✏️ Editar fornecedor")
+
+    fornecedores = load_suppliers()
+
+    if len(fornecedores) > 0:
+        lista = fornecedores["fornecedor"].astype(str).tolist()
+        fornecedor_escolhido = st.selectbox("Selecione o fornecedor", lista)
+
+        dados = fornecedores[fornecedores["fornecedor"].astype(str) == fornecedor_escolhido].iloc[0]
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            novo_nome = st.text_input("Fornecedor", value=str(dados["fornecedor"]), key="edit_fornecedor")
+            novo_cnpj = st.text_input("CNPJ", value=str(dados["cnpj"]), key="edit_cnpj")
+            novo_ie = st.text_input("Inscrição Estadual", value=str(dados["ie"]), key="edit_ie")
+            novo_telefone = st.text_input("Telefone", value=str(dados["telefone"]), key="edit_telefone")
+            novo_whatsapp = st.text_input("WhatsApp", value=str(dados["whatsapp"]), key="edit_whatsapp")
+
+        with col2:
+            novo_email = st.text_input("E-mail", value=str(dados["email"]), key="edit_email")
+            novo_contato = st.text_input("Contato", value=str(dados["contato"]), key="edit_contato")
+            novo_cidade = st.text_input("Cidade", value=str(dados["cidade"]), key="edit_cidade")
+            novo_estado = st.text_input("Estado / UF", value=str(dados["estado"]), key="edit_estado")
+            novo_obs = st.text_area("Observação", value=str(dados["observacao"]), key="edit_obs")
+
+        if st.button("💾 Atualizar fornecedor"):
+            idx = fornecedores[fornecedores["fornecedor"].astype(str) == fornecedor_escolhido].index[0]
+
+            fornecedores.loc[idx, "fornecedor"] = novo_nome.strip()
+            fornecedores.loc[idx, "cnpj"] = novo_cnpj.strip()
+            fornecedores.loc[idx, "ie"] = novo_ie.strip()
+            fornecedores.loc[idx, "telefone"] = novo_telefone.strip()
+            fornecedores.loc[idx, "whatsapp"] = novo_whatsapp.strip()
+            fornecedores.loc[idx, "email"] = novo_email.strip()
+            fornecedores.loc[idx, "contato"] = novo_contato.strip()
+            fornecedores.loc[idx, "cidade"] = novo_cidade.strip()
+            fornecedores.loc[idx, "estado"] = novo_estado.strip()
+            fornecedores.loc[idx, "observacao"] = novo_obs.strip()
+
+            save_suppliers(fornecedores)
+
+            st.success("Fornecedor atualizado com sucesso!")
+            st.rerun()
 
     st.markdown("---")
     st.markdown("### 🔍 Consultar fornecedores")
