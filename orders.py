@@ -116,6 +116,7 @@ def show_new_order() -> None:
             "🔍 Buscar produto por código, nome ou fornecedor",
             _product_options(products),
             key="novo_pedido_produto_selectbox",
+            label_visibility="collapsed",
         )
 
         product_selected = _get_product_from_option(products, selected_text)
@@ -377,6 +378,7 @@ def edit_order() -> None:
         "Buscar produto para adicionar",
         _product_options(products),
         key="edit_order_product_selectbox",
+        label_visibility="collapsed",
     )
 
     product = _get_product_from_option(products, selected_text)
