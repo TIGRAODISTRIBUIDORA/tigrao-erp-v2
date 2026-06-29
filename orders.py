@@ -13,8 +13,7 @@ from database import (
     save_table,
     to_excel_bytes,
 )
-from layout_config import get_screen_layout
-from layout_engine import renderizar_linha
+from visual_designer import get_visual_layout
 from ui import is_admin, metric_card, title
 
 
@@ -54,6 +53,7 @@ def _prepare_products(products):
 
 def _supplier_options(products):
     fornecedores = []
+
     if len(products) and "fornecedor" in products.columns:
         fornecedores = sorted(
             products["fornecedor"]
@@ -65,12 +65,16 @@ def _supplier_options(products):
             .unique()
             .tolist()
         )
+
     return ["Todos"] + fornecedores
 
 
 def _filter_by_supplier(products, supplier):
     if supplier and supplier != "Todos":
-        return products[products["fornecedor"].astype(str).str.strip() == supplier].reset_index(drop=True)
+        return products[
+            products["fornecedor"].astype(str).str.strip() == supplier
+        ].reset_index(drop=True)
+
     return products.reset_index(drop=True)
 
 
@@ -124,10 +128,75 @@ def _add_item_to_cart(product, quantity, discount):
     })
 
 
+def _renderizar_visual(blocos, componentes):
+    blocos_ordenados = sorted(
+        blocos.items(),
+        key=lambda item: (
+            float(item[1].get("y", 0)),
+            float(item[1].get("x", 0))
+        )
+    )
+
+    linhas = {}
+
+    for nome, cfg in blocos_ordenados:
+        y = int(float(cfg.get("y", 0)) / 90)
+        linhas.setdefault(y, []).append((nome, cfg))
+
+    for _, itens in sorted(linhas.items()):
+        itens = sorted(itens, key=lambda item: float(item[1].get("x", 0)))
+
+        colunas = []
+        pos_atual = 0
+
+        for nome, cfg in itens:
+            x = float(cfg.get("x", 0))
+            w = float(cfg.get("w", 120))
+
+            espaco = max(0.1, (x - pos_atual) / 100)
+            largura = max(0.5, w / 100)
+
+            if espaco > 0.1:
+                colunas.append(espaco)
+
+            colunas.append(largura)
+            pos_atual = x + w
+
+        colunas.append(1)
+
+        cols = st.columns(colunas)
+
+        idx_col = 0
+        pos_atual = 0
+
+        for nome, cfg in itens:
+            x = float(cfg.get("x", 0))
+            w = float(cfg.get("w", 120))
+
+            espaco = max(0.1, (x - pos_atual) / 100)
+
+            if espaco > 0.1:
+                idx_col += 1
+
+            with cols[idx_col]:
+                if nome in componentes:
+                    componentes[nome]()
+
+            idx_col += 1
+            pos_atual = x + w
+
+        st.markdown("")
+
+
 def show_new_order() -> None:
     title("🛒 Novo Pedido")
 
-    blocos = get_screen_layout("Novo Pedido")
+    blocos_lista = get_visual_layout("Novo Pedido")
+    blocos = {
+        b["label"]: b
+        for b in blocos_lista
+        if b.get("show", True)
+    }
 
     products = read_table(PRODUCTS_FILE)
     products = _prepare_products(products)
@@ -189,11 +258,15 @@ def show_new_order() -> None:
             label_visibility="collapsed",
         )
 
-        st.session_state.selected_product = _get_product_from_option(filtered_products, selected_text)
+        st.session_state.selected_product = _get_product_from_option(
+            filtered_products,
+            selected_text
+        )
 
     def bloco_botao_adicionar():
         st.write("")
         st.write("")
+
         clicked = st.button("➕ ADICIONAR", use_container_width=True)
 
         if clicked:
@@ -272,7 +345,12 @@ def show_new_order() -> None:
         product = st.session_state.get("selected_product")
 
         if not product:
-            st.text_input("Total do item", value=money(0), disabled=True)
+            st.text_input(
+                "Total do item",
+                value=money(0),
+                disabled=True,
+                key="novo_pedido_total_item_vazio"
+            )
             return
 
         quantity = st.session_state.get("novo_pedido_quantidade", 0)
@@ -321,6 +399,7 @@ def show_new_order() -> None:
                 date = now_text()
 
                 client = st.session_state.get("novo_pedido_cliente", "")
+
                 rows = []
 
                 for item in st.session_state.carrinho:
@@ -369,13 +448,7 @@ def show_new_order() -> None:
         "Limpar Pedido": bloco_limpar,
     }
 
-    linhas = sorted(
-        set(int(float(cfg.get("y", 1))) for cfg in blocos.values())
-    )
-
-    for linha_numero in linhas:
-        renderizar_linha(blocos, componentes, linha_numero)
-        st.markdown("")
+    _renderizar_visual(blocos, componentes)
 
     if st.session_state.get("novo_pedido_add_clicked"):
         product = st.session_state.get("selected_product")
@@ -541,6 +614,7 @@ def edit_order() -> None:
 
         if st.button("➕ Adicionar produto ao pedido"):
             base = order_items.iloc[0].to_dict()
+
             new_item = {
                 "pedido": selected_order,
                 "data": base.get("data", now_text()),
