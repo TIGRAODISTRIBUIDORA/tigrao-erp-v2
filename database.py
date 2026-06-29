@@ -18,6 +18,25 @@ COMMISSION_RATE = 0.07
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
+def normalize_columns(df):
+    df.columns = [
+        str(c).strip().lower()
+        .replace("ç", "c")
+        .replace("ã", "a")
+        .replace("á", "a")
+        .replace("à", "a")
+        .replace("â", "a")
+        .replace("é", "e")
+        .replace("ê", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ô", "o")
+        .replace("ú", "u")
+        for c in df.columns
+    ]
+    return df
+
+
 def read_table(file_path):
     if not os.path.exists(file_path):
         return pd.DataFrame()
@@ -37,13 +56,7 @@ def ensure_data_files():
     os.makedirs(DATA_DIR, exist_ok=True)
 
     if not os.path.exists(PRODUCTS_FILE):
-        pd.DataFrame(columns=[
-            "codigo",
-            "produto",
-            "un",
-            "preco",
-            "fornecedor"
-        ]).to_excel(PRODUCTS_FILE, index=False)
+        pd.DataFrame(columns=["codigo", "produto", "un", "preco", "fornecedor"]).to_excel(PRODUCTS_FILE, index=False)
 
     if not os.path.exists(CLIENTS_FILE):
         pd.DataFrame([{
@@ -56,33 +69,15 @@ def ensure_data_files():
 
     if not os.path.exists(ORDERS_FILE):
         pd.DataFrame(columns=[
-            "pedido",
-            "data",
-            "vendedor",
-            "cliente",
-            "codigo",
-            "produto",
-            "un",
-            "quantidade",
-            "preco",
-            "desconto",
-            "subtotal",
-            "total",
-            "status"
+            "pedido", "data", "vendedor", "cliente", "codigo",
+            "produto", "un", "quantidade", "preco", "desconto",
+            "subtotal", "total", "status"
         ]).to_excel(ORDERS_FILE, index=False)
 
     if not os.path.exists(SUPPLIERS_FILE):
         pd.DataFrame(columns=[
-            "codigo",
-            "fornecedor",
-            "cnpj",
-            "ie",
-            "telefone",
-            "whatsapp",
-            "email",
-            "contato",
-            "cidade",
-            "estado",
+            "codigo", "fornecedor", "cnpj", "ie", "telefone",
+            "whatsapp", "email", "contato", "cidade", "estado",
             "observacao"
         ]).to_excel(SUPPLIERS_FILE, index=False)
 
@@ -131,7 +126,6 @@ def to_excel_bytes(df):
 
 def _load_config():
     ensure_data_files()
-
     config = read_table(CONFIG_FILE)
 
     if len(config) == 0 or "chave" not in config.columns or "valor" not in config.columns:
@@ -161,7 +155,6 @@ def _save_config_value(chave, valor):
 
 def _get_config_value(chave, default=0):
     config = _load_config()
-
     linha = config[config["chave"].astype(str) == chave]
 
     if len(linha) == 0:
@@ -177,19 +170,15 @@ def next_order_number():
     ensure_data_files()
 
     orders = read_table(ORDERS_FILE)
-
     maior_pedido_existente = 0
 
     if len(orders) > 0 and "pedido" in orders.columns:
         try:
-            maior_pedido_existente = int(
-                pd.to_numeric(orders["pedido"], errors="coerce").max()
-            )
+            maior_pedido_existente = int(pd.to_numeric(orders["pedido"], errors="coerce").max())
         except Exception:
             maior_pedido_existente = 0
 
     ultimo_pedido_config = _get_config_value("ultimo_pedido", 0)
-
     proximo = max(maior_pedido_existente, ultimo_pedido_config) + 1
 
     _save_config_value("ultimo_pedido", proximo)
