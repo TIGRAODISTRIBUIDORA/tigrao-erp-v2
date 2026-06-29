@@ -16,6 +16,24 @@ from database import (
 from ui import is_admin, metric_card, title
 
 
+def _safe_float(value):
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
+
+def _safe_key(value):
+    return (
+        str(value)
+        .replace(" ", "_")
+        .replace("/", "_")
+        .replace(".", "_")
+        .replace("-", "_")
+        .replace(",", "_")
+    )
+
+
 def show_new_order() -> None:
     title("🛒 Novo Pedido")
 
@@ -30,6 +48,9 @@ def show_new_order() -> None:
 
     if "produto_pedido_selecionado" not in st.session_state:
         st.session_state.produto_pedido_selecionado = None
+
+    if "pedido_search" not in st.session_state:
+        st.session_state.pedido_search = ""
 
     if len(products) == 0:
         st.warning("Nenhum produto cadastrado.")
@@ -51,61 +72,71 @@ def show_new_order() -> None:
             value=st.session_state.get("vendedor", "")
         )
 
-    search = st.text_input("🔍 Buscar produto por código, nome ou fornecedor")
+    st.markdown("---")
 
-    if search:
+    busca_col, botao_col = st.columns([2, 1])
+
+    with busca_col:
+        search = st.text_input(
+            "🔍 Buscar produto por código, nome ou fornecedor",
+            key="pedido_search"
+        )
+
+    with botao_col:
+        st.write("")
+        st.write("")
+        adicionar_clicado = st.button(
+            "➕ ADICIONAR AO PEDIDO",
+            use_container_width=True
+        )
+
+    st.markdown("### Sugestões de produtos")
+
+    filtered = pd.DataFrame()
+
+    if search.strip():
         filtered = products[
             products["produto"].astype(str).str.contains(search, case=False, na=False)
             | products["codigo"].astype(str).str.contains(search, case=False, na=False)
             | products["fornecedor"].astype(str).str.contains(search, case=False, na=False)
-        ]
-    else:
-        filtered = products.head(8)
+        ].head(8)
 
-    st.markdown("### Sugestões de produtos")
+        if len(filtered) == 0:
+            st.info("Nenhum produto encontrado.")
+        else:
+            options = []
 
-    if len(filtered) == 0:
-        st.info("Nenhum produto encontrado.")
-    else:
-        opcoes = []
+            for _, row in filtered.iterrows():
+                codigo = str(row.get("codigo", ""))
+                produto = str(row.get("produto", ""))
+                fornecedor = str(row.get("fornecedor", ""))
+                preco = _safe_float(row.get("preco", 0))
 
-        for _, row in filtered.head(8).iterrows():
-            codigo = str(row.get("codigo", ""))
-            produto = str(row.get("produto", ""))
-            fornecedor = str(row.get("fornecedor", ""))
+                options.append(
+                    f"{codigo} - {produto} | {money(preco)} | Fornecedor: {fornecedor}"
+                )
 
-            try:
-                preco = float(row.get("preco", 0))
-            except Exception:
-                preco = 0.0
-
-            opcoes.append(
-                f"{codigo} - {produto} | {money(preco)} | Fornecedor: {fornecedor}"
+            selected_text = st.radio(
+                "Selecione um produto",
+                options,
+                label_visibility="collapsed",
+                key="produto_radio"
             )
 
-        produto_texto = st.radio(
-            "Selecione um produto",
-            opcoes,
-            label_visibility="collapsed"
-        )
+            if selected_text:
+                selected_index = options.index(selected_text)
+                st.session_state.produto_pedido_selecionado = filtered.iloc[selected_index].to_dict()
+    else:
+        st.info("Digite o nome, código ou fornecedor para buscar produtos.")
 
-        if produto_texto:
-            indice = opcoes.index(produto_texto)
-            produto_escolhido = filtered.head(8).iloc[indice].to_dict()
-            st.session_state.produto_pedido_selecionado = produto_escolhido
+    product = st.session_state.get("produto_pedido_selecionado")
 
-    if st.session_state.produto_pedido_selecionado:
-        product = st.session_state.produto_pedido_selecionado
-
+    if product:
         codigo = str(product.get("codigo", ""))
         produto = str(product.get("produto", ""))
         fornecedor = str(product.get("fornecedor", ""))
         unidade = str(product.get("un", "UN"))
-
-        try:
-            price = float(product.get("preco", 0))
-        except Exception:
-            price = 0.0
+        price = _safe_float(product.get("preco", 0))
 
         st.markdown("---")
         st.markdown("### Produto selecionado")
@@ -123,12 +154,15 @@ def show_new_order() -> None:
 
         q1, q2, q3 = st.columns(3)
 
+        key_base = _safe_key(f"{codigo}_{produto}")
+
         with q1:
             quantity = st.number_input(
                 "Quantidade",
                 min_value=1,
                 value=1,
-                step=1
+                step=1,
+                key=f"qtd_{key_base}",
             )
 
         with q2:
@@ -136,12 +170,14 @@ def show_new_order() -> None:
                 "% Desconto",
                 min_value=0.0,
                 value=0.0,
-                step=1.0
+                step=1.0,
+                key=f"desc_{key_base}",
             )
 
+        subtotal = price * quantity
+        total = subtotal - (subtotal * discount / 100)
+
         with q3:
-            subtotal = price * quantity
-            total = subtotal - (subtotal * discount / 100)
             st.text_input(
                 "Total do item",
                 value=money(total),
@@ -150,7 +186,7 @@ def show_new_order() -> None:
 
         flash_area = st.empty()
 
-        if st.button("➕ Adicionar ao pedido"):
+        if adicionar_clicado:
             st.session_state.carrinho.append({
                 "codigo": codigo,
                 "produto": produto,
@@ -188,8 +224,14 @@ def show_new_order() -> None:
             )
 
             st.session_state.produto_pedido_selecionado = None
+            st.session_state.pedido_search = ""
+
             time.sleep(0.8)
             st.rerun()
+
+    else:
+        if adicionar_clicado:
+            st.warning("Selecione um produto antes de adicionar ao pedido.")
 
     st.markdown("---")
     st.markdown(f"### Carrinho ({len(st.session_state.carrinho)} itens)")
@@ -250,6 +292,7 @@ def show_new_order() -> None:
 
                 st.session_state.carrinho = []
                 st.session_state.produto_pedido_selecionado = None
+                st.session_state.pedido_search = ""
 
                 st.success(f"Pedido nº {number} salvo com sucesso!")
                 st.rerun()
@@ -258,6 +301,7 @@ def show_new_order() -> None:
         if st.button("🗑️ LIMPAR PEDIDO"):
             st.session_state.carrinho = []
             st.session_state.produto_pedido_selecionado = None
+            st.session_state.pedido_search = ""
             st.rerun()
 
 
