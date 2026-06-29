@@ -132,19 +132,22 @@ def show_new_order() -> None:
                     f"{money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
                 )
 
-            selected_text = st.radio(
+            selected_text = st.selectbox(
                 "Sugestões de produtos",
-                options,
-                label_visibility="visible",
+                ["Selecione um produto"] + options,
             )
 
-            if selected_text:
+            if selected_text != "Selecione um produto":
                 idx = options.index(selected_text)
                 st.session_state.selected_product = filtered.iloc[idx].to_dict()
+            else:
+                st.session_state.selected_product = None
         else:
             st.info("Nenhum produto encontrado.")
+            st.session_state.selected_product = None
     else:
         st.info("Digite para buscar produtos.")
+        st.session_state.selected_product = None
 
     product = st.session_state.get("selected_product")
 
@@ -389,17 +392,20 @@ def edit_order() -> None:
                     f"{money(_safe_float(product.get('preco', 0)))}"
                 )
 
-            selected_text = st.radio(
+            selected_text = st.selectbox(
                 "Sugestões",
-                options,
-                key="edit_order_product_radio",
+                ["Selecione um produto"] + options,
+                key="edit_order_product_selectbox",
             )
 
-            if selected_text:
+            if selected_text != "Selecione um produto":
                 idx = options.index(selected_text)
                 st.session_state.edit_selected_product = filtered.iloc[idx].to_dict()
+            else:
+                st.session_state.edit_selected_product = None
         else:
             st.info("Nenhum produto encontrado.")
+            st.session_state.edit_selected_product = None
 
     product = st.session_state.get("edit_selected_product")
 
