@@ -32,6 +32,62 @@ def save_table(df, file_path):
     df.to_excel(file_path, index=False)
 
 
+def ensure_data_files():
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    if not os.path.exists(PRODUCTS_FILE):
+        pd.DataFrame(columns=[
+            "codigo", "produto", "un", "preco", "fornecedor"
+        ]).to_excel(PRODUCTS_FILE, index=False)
+
+    if not os.path.exists(CLIENTS_FILE):
+        pd.DataFrame([{
+            "codigo": 1,
+            "cliente": "CLIENTE PADRÃO",
+            "cnpj": "",
+            "telefone": "",
+            "cidade": ""
+        }]).to_excel(CLIENTS_FILE, index=False)
+
+    if not os.path.exists(ORDERS_FILE):
+        pd.DataFrame(columns=[
+            "pedido",
+            "data",
+            "vendedor",
+            "cliente",
+            "codigo",
+            "produto",
+            "un",
+            "quantidade",
+            "preco",
+            "desconto",
+            "subtotal",
+            "total",
+            "status"
+        ]).to_excel(ORDERS_FILE, index=False)
+
+    if not os.path.exists(SUPPLIERS_FILE):
+        pd.DataFrame(columns=[
+            "codigo",
+            "fornecedor",
+            "cnpj",
+            "ie",
+            "telefone",
+            "whatsapp",
+            "email",
+            "contato",
+            "cidade",
+            "estado",
+            "observacao"
+        ]).to_excel(SUPPLIERS_FILE, index=False)
+
+    if not os.path.exists(CONFIG_FILE):
+        pd.DataFrame([{
+            "chave": "ultimo_pedido",
+            "valor": 0
+        }]).to_excel(CONFIG_FILE, index=False)
+
+
 def now_text():
     return datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
@@ -51,13 +107,7 @@ def to_excel_bytes(df):
 
 
 def _load_config():
-    if not os.path.exists(CONFIG_FILE):
-        config = pd.DataFrame([{
-            "chave": "ultimo_pedido",
-            "valor": 0
-        }])
-        save_table(config, CONFIG_FILE)
-        return config
+    ensure_data_files()
 
     config = read_table(CONFIG_FILE)
 
@@ -101,6 +151,8 @@ def _get_config_value(chave, default=0):
 
 
 def next_order_number():
+    ensure_data_files()
+
     orders = read_table(ORDERS_FILE)
 
     maior_pedido_existente = 0
