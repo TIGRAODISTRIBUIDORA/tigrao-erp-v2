@@ -1,9 +1,14 @@
+import os
 import pandas as pd
 import streamlit as st
 
 from database import PRODUCTS_FILE, normalize_columns, read_table, save_table, to_excel_bytes
 from suppliers import supplier_form_inline, supplier_options
 from ui import is_admin, title
+
+
+IMAGES_DIR = "assets/produtos"
+os.makedirs(IMAGES_DIR, exist_ok=True)
 
 
 def _prepare_products(df):
@@ -14,6 +19,27 @@ def _prepare_products(df):
         df["imagem"] = ""
 
     return df
+
+
+def _safe_filename(value):
+    name = str(value).strip()
+    name = name.replace("/", "_").replace("\\", "_").replace(" ", "_")
+    name = name.replace(".", "_").replace(",", "_").replace(":", "_")
+    return name if name else "produto"
+
+
+def _save_uploaded_image(uploaded_file, codigo):
+    if uploaded_file is None:
+        return ""
+
+    ext = uploaded_file.name.split(".")[-1].lower()
+    filename = f"{_safe_filename(codigo)}.{ext}"
+    path = os.path.join(IMAGES_DIR, filename)
+
+    with open(path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+
+    return path
 
 
 def show_products() -> None:
@@ -38,16 +64,26 @@ def show_products() -> None:
             with col2:
                 preco = st.number_input("Preço", min_value=0.0, step=0.10)
                 fornecedor = st.selectbox("Fornecedor", suppliers) if suppliers else st.text_input("Fornecedor")
-                imagem = st.text_input("Link da imagem do produto")
+                imagem_link = st.text_input("Link da imagem do produto")
+                imagem_upload = st.file_uploader(
+                    "📷 Enviar imagem do produto",
+                    type=["png", "jpg", "jpeg", "webp"],
+                    key="upload_img_novo_produto"
+                )
 
             if st.button("Salvar Produto"):
+                imagem_final = imagem_link.strip()
+
+                if imagem_upload is not None:
+                    imagem_final = _save_uploaded_image(imagem_upload, codigo)
+
                 new = pd.DataFrame([{
                     "codigo": codigo,
                     "produto": produto,
                     "un": un,
                     "preco": preco,
                     "fornecedor": fornecedor,
-                    "imagem": imagem
+                    "imagem": imagem_final
                 }])
 
                 products = pd.concat([products, new], ignore_index=True)
@@ -65,7 +101,7 @@ def show_products() -> None:
             "un": "UN",
             "preco": 20.77,
             "fornecedor": "Vitalab",
-            "imagem": "https://exemplo.com/imagem-produto.jpg"
+            "imagem": "assets/produtos/187.jpg"
         }])
 
         st.download_button(
@@ -109,7 +145,7 @@ def show_products() -> None:
     st.dataframe(filtered, use_container_width=True)
 
     st.markdown("---")
-    st.markdown("### 🖼️ Visualizar imagem do produto")
+    st.markdown("### 🖼️ Visualizar / cadastrar imagem do produto")
 
     if len(filtered) == 0:
         st.info("Nenhum produto disponível para visualizar.")
@@ -122,22 +158,61 @@ def show_products() -> None:
             f"{row.get('codigo', '')} - {row.get('produto', '')}"
         )
 
-    produto_escolhido = st.selectbox("Selecione um produto para abrir a imagem", opcoes)
+    produto_escolhido = st.selectbox("Selecione um produto", opcoes)
 
     if produto_escolhido:
         idx = opcoes.index(produto_escolhido)
         row = filtered.iloc[idx]
 
+        codigo = str(row.get("codigo", "")).strip()
         imagem = str(row.get("imagem", "")).strip()
 
         st.markdown(f"**Produto:** {row.get('produto', '')}")
-        st.markdown(f"**Código:** {row.get('codigo', '')}")
+        st.markdown(f"**Código:** {codigo}")
         st.markdown(f"**Fornecedor:** {row.get('fornecedor', '')}")
 
         if imagem:
-            st.image(imagem, caption=str(row.get("produto", "")), width=350)
+            try:
+                st.image(imagem, caption=str(row.get("produto", "")), width=350)
+            except Exception:
+                st.warning("A imagem cadastrada não pôde ser aberta.")
         else:
             st.warning("Esse produto ainda não tem imagem cadastrada.")
+
+        if is_admin():
+            st.markdown("### 📷 Cadastrar / trocar imagem deste produto")
+
+            nova_imagem_link = st.text_input(
+                "Link da imagem",
+                value=imagem if imagem.startswith("http") else "",
+                key=f"link_img_{codigo}"
+            )
+
+            nova_imagem_upload = st.file_uploader(
+                "Enviar imagem do computador",
+                type=["png", "jpg", "jpeg", "webp"],
+                key=f"upload_img_{codigo}"
+            )
+
+            if st.button("💾 Salvar imagem do produto"):
+                imagem_final = nova_imagem_link.strip()
+
+                if nova_imagem_upload is not None:
+                    imagem_final = _save_uploaded_image(nova_imagem_upload, codigo)
+
+                all_products = read_table(PRODUCTS_FILE)
+                all_products = _prepare_products(all_products)
+                all_products["codigo"] = all_products["codigo"].astype(str).str.strip()
+
+                all_products.loc[
+                    all_products["codigo"] == codigo,
+                    "imagem"
+                ] = imagem_final
+
+                save_table(all_products, PRODUCTS_FILE)
+
+                st.success("Imagem do produto salva com sucesso.")
+                st.rerun()
 
 
 def show_import_products() -> None:
@@ -155,7 +230,7 @@ def show_import_products() -> None:
         "un": "UN",
         "preco": 20.77,
         "fornecedor": "Vitalab",
-        "imagem": "https://exemplo.com/imagem-produto.jpg"
+        "imagem": "assets/produtos/187.jpg"
     }])
 
     st.download_button(
