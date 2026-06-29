@@ -38,7 +38,10 @@ def _prepare_products(df):
     df["preco"] = pd.to_numeric(df["preco"], errors="coerce").fillna(0)
 
     df = df[df["produto"] != ""]
-    df = df.drop_duplicates(subset=["codigo", "produto", "preco", "fornecedor"], keep="last")
+    df = df.drop_duplicates(
+        subset=["codigo", "produto", "preco", "fornecedor"],
+        keep="last"
+    )
 
     return df.reset_index(drop=True)
 
@@ -105,8 +108,10 @@ def _get_product_from_option(products, selected_text):
 
     try:
         idx = int(str(selected_text).split("|")[0].strip())
+
         if idx not in products.index:
             return None
+
         return products.loc[idx]
     except Exception:
         return None
@@ -191,12 +196,15 @@ def show_products() -> None:
     st.markdown("---")
     st.markdown("### 🔍 Consultar produto")
 
-    selected_text = st.selectbox(
-        "Buscar produto por código ou nome",
-        _product_options(products),
-        key="consulta_produto_selectbox",
-        label_visibility="collapsed",
-    )
+    col_busca, col_vazio = st.columns([4, 6])
+
+    with col_busca:
+        selected_text = st.selectbox(
+            "Buscar produto por código ou nome",
+            _product_options(products),
+            key="consulta_produto_selectbox",
+            label_visibility="collapsed",
+        )
 
     produto_selecionado = _get_product_from_option(products, selected_text)
 
