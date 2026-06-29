@@ -12,26 +12,33 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 
 
 def _prepare_products(df):
-    for col, default in {
-        "codigo": "",
-        "produto": "",
-        "un": "UN",
-        "preco": 0,
-        "fornecedor": "",
-        "imagem": "",
-    }.items():
-        if col not in df.columns:
-            df[col] = default
+    if "codigo" not in df.columns:
+        df["codigo"] = ""
 
-    df["codigo"] = df["codigo"].replace("nan", "").fillna("").astype(str).str.strip()
-    df["produto"] = df["produto"].replace("nan", "").fillna("").astype(str).str.strip()
-    df["un"] = df["un"].replace("nan", "UN").fillna("UN").astype(str).str.strip()
-    df["fornecedor"] = df["fornecedor"].replace("nan", "").fillna("").astype(str).str.strip()
-    df["imagem"] = df["imagem"].replace("nan", "").fillna("").astype(str).str.strip()
+    if "produto" not in df.columns:
+        df["produto"] = ""
+
+    if "un" not in df.columns:
+        df["un"] = "UN"
+
+    if "preco" not in df.columns:
+        df["preco"] = 0
+
+    if "fornecedor" not in df.columns:
+        df["fornecedor"] = ""
+
+    if "imagem" not in df.columns:
+        df["imagem"] = ""
+
+    df["codigo"] = df["codigo"].astype(str).str.strip()
+    df["produto"] = df["produto"].astype(str).str.strip()
+    df["un"] = df["un"].astype(str).str.strip()
+    df["fornecedor"] = df["fornecedor"].astype(str).str.strip()
+    df["imagem"] = df["imagem"].astype(str).str.strip()
     df["preco"] = pd.to_numeric(df["preco"], errors="coerce").fillna(0)
 
     df = df[df["produto"] != ""]
-    df = df.drop_duplicates(subset=["codigo"], keep="last")
+    df = df.drop_duplicates(subset=["codigo", "produto", "preco", "fornecedor"], keep="last")
 
     return df.reset_index(drop=True)
 
@@ -47,17 +54,8 @@ def _money(value):
     return f"R$ {_safe_float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _safe_text(value):
-    if pd.isna(value):
-        return ""
-    text = str(value).strip()
-    if text.lower() == "nan":
-        return ""
-    return text
-
-
 def _safe_filename(value):
-    name = _safe_text(value)
+    name = str(value).strip()
     name = name.replace("/", "_").replace("\\", "_").replace(" ", "_")
     name = name.replace(".", "_").replace(",", "_").replace(":", "_")
     return name if name else "produto"
@@ -77,40 +75,41 @@ def _save_uploaded_image(uploaded_file, codigo):
     return path
 
 
-def _filter_products(products, search):
-    search = str(search).strip().lower()
+def _product_options(products):
+    options = ["Selecione ou digite o produto"]
+    vistos = set()
 
-    if not search:
-        return pd.DataFrame()
+    for idx, row in products.iterrows():
+        codigo = str(row.get("codigo", "")).strip()
+        produto = str(row.get("produto", "")).strip()
+        preco = _money(row.get("preco", 0))
+        fornecedor = str(row.get("fornecedor", "")).strip()
 
-    filtered = products[
-        products["codigo"].astype(str).str.lower().str.contains(search, na=False) |
-        products["produto"].astype(str).str.lower().str.contains(search, na=False) |
-        products["fornecedor"].astype(str).str.lower().str.contains(search, na=False)
-    ]
+        chave = f"{codigo}|{produto}|{preco}|{fornecedor}"
 
-    filtered = filtered.drop_duplicates(subset=["codigo"], keep="last")
+        if chave in vistos:
+            continue
 
-    return filtered.head(10).reset_index(drop=True)
+        vistos.add(chave)
+
+        options.append(
+            f"{idx} | {codigo} - {produto} | {preco} | {fornecedor}"
+        )
+
+    return options
 
 
-def _resultado_button_html(texto):
-    return f"""
-    <div style="
-        background:#f97316;
-        color:white;
-        padding:18px 22px;
-        margin-bottom:12px;
-        border-radius:12px;
-        font-size:20px;
-        font-weight:800;
-        text-align:center;
-        border:1px solid #fb923c;
-        box-shadow:0 2px 6px rgba(0,0,0,0.25);
-    ">
-        {texto}
-    </div>
-    """
+def _get_product_from_option(products, selected_text):
+    if selected_text == "Selecione ou digite o produto":
+        return None
+
+    try:
+        idx = int(str(selected_text).split("|")[0].strip())
+        if idx not in products.index:
+            return None
+        return products.loc[idx]
+    except Exception:
+        return None
 
 
 def show_products() -> None:
@@ -118,9 +117,6 @@ def show_products() -> None:
 
     products = read_table(PRODUCTS_FILE)
     products = _prepare_products(products)
-
-    if "produto_consulta_codigo" not in st.session_state:
-        st.session_state.produto_consulta_codigo = ""
 
     if is_admin():
         supplier_form_inline("products")
@@ -162,6 +158,7 @@ def show_products() -> None:
 
                 products = pd.concat([products, new], ignore_index=True)
                 products = _prepare_products(products)
+                products = products.drop_duplicates(subset=["codigo"], keep="last")
 
                 save_table(products, PRODUCTS_FILE)
 
@@ -194,66 +191,25 @@ def show_products() -> None:
     st.markdown("---")
     st.markdown("### 🔍 Consultar produto")
 
-    search = st.text_input(
-        "Buscar produto por código, nome ou fornecedor",
+    selected_text = st.selectbox(
+        "Buscar produto por código ou nome",
+        _product_options(products),
+        key="consulta_produto_selectbox",
         label_visibility="collapsed",
-        placeholder="Digite código, nome ou fornecedor"
     )
 
-    filtered = _filter_products(products, search)
-
-    if search and len(filtered) == 0:
-        st.warning("Nenhum produto encontrado.")
-
-    if len(filtered):
-        st.markdown("### Resultado da busca")
-
-        st.markdown("""
-        <style>
-        div.stButton > button {
-            font-size: 20px !important;
-            font-weight: 900 !important;
-            min-height: 68px !important;
-            border-radius: 12px !important;
-            padding: 14px 18px !important;
-            text-align: center !important;
-            white-space: normal !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
-        for i, row in filtered.iterrows():
-            codigo = _safe_text(row.get("codigo", ""))
-            produto = _safe_text(row.get("produto", ""))
-            fornecedor = _safe_text(row.get("fornecedor", ""))
-            preco = _money(row.get("preco", 0))
-
-            texto = f"{codigo} - {produto} | {preco} | {fornecedor}"
-
-            if st.button(texto, key=f"selecionar_produto_{i}", use_container_width=True):
-                st.session_state.produto_consulta_codigo = codigo
-                st.rerun()
-
-    produto_selecionado = None
-
-    if st.session_state.produto_consulta_codigo:
-        encontrado = products[
-            products["codigo"].astype(str) == str(st.session_state.produto_consulta_codigo)
-        ]
-
-        if len(encontrado):
-            produto_selecionado = encontrado.iloc[0]
+    produto_selecionado = _get_product_from_option(products, selected_text)
 
     if produto_selecionado is None:
-        st.info("Digite e selecione um produto para visualizar.")
+        st.info("Digite ou selecione um produto para visualizar.")
         return
 
-    codigo = _safe_text(produto_selecionado.get("codigo", ""))
-    produto = _safe_text(produto_selecionado.get("produto", ""))
-    un = _safe_text(produto_selecionado.get("un", "UN"))
+    codigo = str(produto_selecionado.get("codigo", "")).strip()
+    produto = str(produto_selecionado.get("produto", "")).strip()
+    un = str(produto_selecionado.get("un", "UN")).strip()
     preco = _safe_float(produto_selecionado.get("preco", 0))
-    fornecedor = _safe_text(produto_selecionado.get("fornecedor", ""))
-    imagem = _safe_text(produto_selecionado.get("imagem", ""))
+    fornecedor = str(produto_selecionado.get("fornecedor", "")).strip()
+    imagem = str(produto_selecionado.get("imagem", "")).strip()
 
     st.markdown("---")
     st.markdown("### Produto selecionado")
@@ -263,36 +219,12 @@ def show_products() -> None:
     with col_info:
         st.markdown(
             f"""
-            <div style="
-                background:#111827;
-                border-radius:16px;
-                padding:26px;
-                border:1px solid #374151;
-                line-height:1.8;
-                color:white;
-            ">
-                <div style="font-size:32px;font-weight:900;margin-bottom:14px;">
-                    {produto}
-                </div>
-
-                <div style="font-size:22px;">
-                    <b>Código:</b> {codigo}
-                </div>
-
-                <div style="font-size:22px;">
-                    <b>Unidade:</b> {un}
-                </div>
-
-                <div style="font-size:22px;">
-                    <b>Fornecedor:</b> {fornecedor}
-                </div>
-
-                <div style="font-size:24px;margin-top:8px;">
-                    <b>Preço:</b>
-                    <span style="color:#22c55e;font-size:30px;font-weight:900;">
-                        {_money(preco)}
-                    </span>
-                </div>
+            <div class='card'>
+                <b>Código:</b> {codigo}<br>
+                <b>Produto:</b> {produto}<br>
+                <b>Unidade:</b> {un}<br>
+                <b>Preço:</b> {_money(preco)}<br>
+                <b>Fornecedor:</b> {fornecedor}
             </div>
             """,
             unsafe_allow_html=True
@@ -301,7 +233,7 @@ def show_products() -> None:
     with col_img:
         if imagem:
             try:
-                st.image(imagem, caption=produto, width=420)
+                st.image(imagem, caption=produto, width=300)
             except Exception:
                 st.warning("A imagem cadastrada não pôde ser aberta.")
         else:
@@ -412,11 +344,11 @@ def show_import_products() -> None:
 
     df = df[["codigo", "produto", "un", "preco", "fornecedor", "imagem"]]
 
-    df["codigo"] = df["codigo"].replace("nan", "").fillna("").astype(str).str.strip()
-    df["produto"] = df["produto"].replace("nan", "").fillna("").astype(str).str.strip()
-    df["un"] = df["un"].replace("nan", "UN").fillna("UN").astype(str).str.strip()
-    df["fornecedor"] = df["fornecedor"].replace("nan", "").fillna("").astype(str).str.strip()
-    df["imagem"] = df["imagem"].replace("nan", "").fillna("").astype(str).str.strip()
+    df["codigo"] = df["codigo"].astype(str).str.strip()
+    df["produto"] = df["produto"].astype(str).str.strip()
+    df["un"] = df["un"].astype(str).str.strip()
+    df["fornecedor"] = df["fornecedor"].astype(str).str.strip()
+    df["imagem"] = df["imagem"].astype(str).str.strip()
     df["preco"] = pd.to_numeric(df["preco"], errors="coerce").fillna(0)
 
     df = df[df["produto"] != ""]
