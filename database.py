@@ -10,6 +10,7 @@ PRODUCTS_FILE = os.path.join(DATA_DIR, "produtos.xlsx")
 CLIENTS_FILE = os.path.join(DATA_DIR, "clientes.xlsx")
 ORDERS_FILE = os.path.join(DATA_DIR, "pedidos.xlsx")
 SUPPLIERS_FILE = os.path.join(DATA_DIR, "fornecedores.xlsx")
+USERS_FILE = os.path.join(DATA_DIR, "usuarios.xlsx")
 CONFIG_FILE = os.path.join(DATA_DIR, "configuracoes.xlsx")
 
 COMMISSION_RATE = 0.07
@@ -51,35 +52,33 @@ def ensure_data_files():
 
     if not os.path.exists(ORDERS_FILE):
         pd.DataFrame(columns=[
-            "pedido",
-            "data",
-            "vendedor",
-            "cliente",
-            "codigo",
-            "produto",
-            "un",
-            "quantidade",
-            "preco",
-            "desconto",
-            "subtotal",
-            "total",
-            "status"
+            "pedido", "data", "vendedor", "cliente", "codigo",
+            "produto", "un", "quantidade", "preco", "desconto",
+            "subtotal", "total", "status"
         ]).to_excel(ORDERS_FILE, index=False)
 
     if not os.path.exists(SUPPLIERS_FILE):
         pd.DataFrame(columns=[
-            "codigo",
-            "fornecedor",
-            "cnpj",
-            "ie",
-            "telefone",
-            "whatsapp",
-            "email",
-            "contato",
-            "cidade",
-            "estado",
+            "codigo", "fornecedor", "cnpj", "ie", "telefone",
+            "whatsapp", "email", "contato", "cidade", "estado",
             "observacao"
         ]).to_excel(SUPPLIERS_FILE, index=False)
+
+    if not os.path.exists(USERS_FILE):
+        pd.DataFrame([
+            {
+                "usuario": "admin",
+                "senha": "tigrao123",
+                "nome": "Administrador",
+                "perfil": "admin"
+            },
+            {
+                "usuario": "vendedor",
+                "senha": "123",
+                "nome": "Vendedor",
+                "perfil": "vendedor"
+            }
+        ]).to_excel(USERS_FILE, index=False)
 
     if not os.path.exists(CONFIG_FILE):
         pd.DataFrame([{
@@ -108,7 +107,6 @@ def to_excel_bytes(df):
 
 def _load_config():
     ensure_data_files()
-
     config = read_table(CONFIG_FILE)
 
     if len(config) == 0 or "chave" not in config.columns or "valor" not in config.columns:
@@ -138,7 +136,6 @@ def _save_config_value(chave, valor):
 
 def _get_config_value(chave, default=0):
     config = _load_config()
-
     linha = config[config["chave"].astype(str) == chave]
 
     if len(linha) == 0:
@@ -154,7 +151,6 @@ def next_order_number():
     ensure_data_files()
 
     orders = read_table(ORDERS_FILE)
-
     maior_pedido_existente = 0
 
     if len(orders) > 0 and "pedido" in orders.columns:
@@ -164,7 +160,6 @@ def next_order_number():
             maior_pedido_existente = 0
 
     ultimo_pedido_config = _get_config_value("ultimo_pedido", 0)
-
     proximo = max(maior_pedido_existente, ultimo_pedido_config) + 1
 
     _save_config_value("ultimo_pedido", proximo)
