@@ -13,43 +13,42 @@ from database import (
     save_table,
     to_excel_bytes,
 )
+from layout_config import load_layout
 from ui import is_admin, metric_card, title
 
 
-# =========================
-# CONFIGURAÇÃO DO LAYOUT
-# =========================
-# Quanto maior o número, maior fica o quadrado/campo.
-# Para empurrar algo para a direita, aumente o campo de espaço.
-# Para trazer para a esquerda, diminua o espaço.
+def _layout_values():
+    layout = load_layout()
 
-NOVO_PEDIDO_CLIENTE = [2, 2]
+    return {
+        "cliente": [2, 2],
 
-NOVO_PEDIDO_BUSCA = [
-    1.2,  # Fornecedor
-    2.4,  # Produto
-    1.0,  # Botão adicionar
-    1.2,  # Espaço vazio
-]
+        "novo_busca": [
+            float(layout.get("novo_fornecedor", 1.2)),
+            float(layout.get("novo_produto", 2.4)),
+            float(layout.get("novo_botao", 1.0)),
+            float(layout.get("novo_espaco", 1.2)),
+        ],
 
-NOVO_PEDIDO_ITEM = [
-    1.0,  # Quantidade
-    1.0,  # Desconto
-    1.2,  # Total do item
-    1.8,  # Espaço vazio
-]
+        "novo_item": [
+            float(layout.get("item_quantidade", 1.0)),
+            float(layout.get("item_desconto", 1.0)),
+            float(layout.get("item_total", 1.2)),
+            float(layout.get("item_espaco", 1.8)),
+        ],
 
-NOVO_PEDIDO_BOTOES = [
-    1.2,  # Finalizar pedido
-    1.2,  # Limpar pedido
-    2.0,  # Espaço vazio
-]
+        "novo_botoes": [
+            1.2,
+            1.2,
+            2.0,
+        ],
 
-ALTERAR_PEDIDO_BUSCA = [
-    1.2,  # Fornecedor
-    2.4,  # Produto
-    2.2,  # Espaço vazio
-]
+        "alterar_busca": [
+            float(layout.get("novo_fornecedor", 1.2)),
+            float(layout.get("novo_produto", 2.4)),
+            2.2,
+        ],
+    }
 
 
 def _safe_float(value):
@@ -166,6 +165,8 @@ def _get_product_from_option(products, selected_text):
 
 
 def show_new_order() -> None:
+    layout = _layout_values()
+
     title("🛒 Novo Pedido")
 
     products = read_table(PRODUCTS_FILE)
@@ -187,7 +188,7 @@ def show_new_order() -> None:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
 
-    col_cliente, col_vazio = st.columns(NOVO_PEDIDO_CLIENTE)
+    col_cliente, col_vazio = st.columns(layout["cliente"])
 
     with col_cliente:
         client_list = (
@@ -199,7 +200,7 @@ def show_new_order() -> None:
 
     st.markdown("---")
 
-    supplier_col, search_col, button_col, empty_col = st.columns(NOVO_PEDIDO_BUSCA)
+    supplier_col, search_col, button_col, empty_col = st.columns(layout["novo_busca"])
 
     with supplier_col:
         supplier_filter = st.selectbox(
@@ -275,7 +276,7 @@ def show_new_order() -> None:
             unsafe_allow_html=True,
         )
 
-        q1, q2, q3, q4 = st.columns(NOVO_PEDIDO_ITEM)
+        q1, q2, q3, q4 = st.columns(layout["novo_item"])
 
         with q1:
             quantity = st.number_input(
@@ -338,7 +339,7 @@ def show_new_order() -> None:
     else:
         st.info("Nenhum produto adicionado ao pedido.")
 
-    f1, f2, f3 = st.columns(NOVO_PEDIDO_BOTOES)
+    f1, f2, f3 = st.columns(layout["novo_botoes"])
 
     with f1:
         if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
@@ -384,6 +385,8 @@ def show_new_order() -> None:
 
 
 def edit_order() -> None:
+    layout = _layout_values()
+
     st.markdown("---")
     st.markdown("## ✏️ Alterar Pedido")
 
@@ -471,7 +474,7 @@ def edit_order() -> None:
     st.markdown("---")
     st.markdown("### ➕ Adicionar novo produto ao pedido")
 
-    supplier_col, product_col, empty_col = st.columns(ALTERAR_PEDIDO_BUSCA)
+    supplier_col, product_col, empty_col = st.columns(layout["alterar_busca"])
 
     with supplier_col:
         edit_supplier_filter = st.selectbox(
