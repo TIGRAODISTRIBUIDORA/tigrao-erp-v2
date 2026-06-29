@@ -38,6 +38,9 @@ def show_new_order() -> None:
     if "selected_product" not in st.session_state:
         st.session_state.selected_product = None
 
+    if "produto_adicionado" not in st.session_state:
+        st.session_state.produto_adicionado = False
+
     if len(products) == 0:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
@@ -66,6 +69,33 @@ def show_new_order() -> None:
         st.write("")
         st.write("")
         add_clicked = st.button("➕ ADICIONAR", use_container_width=True)
+
+        if st.session_state.get("produto_adicionado"):
+            st.markdown(
+                """
+                <div style="
+                    background:#16a34a;
+                    color:white;
+                    padding:10px;
+                    border-radius:8px;
+                    text-align:center;
+                    font-weight:800;
+                    animation: blink 0.35s alternate 3;
+                    margin-top:8px;
+                ">
+                    ✅ Produto adicionado
+                </div>
+
+                <style>
+                @keyframes blink {
+                    from { opacity: 0.35; }
+                    to { opacity: 1; }
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.session_state.produto_adicionado = False
 
     filtered = pd.DataFrame()
 
@@ -145,33 +175,9 @@ def show_new_order() -> None:
                 "total": total,
             })
 
-            st.markdown(
-                """
-                <div style="
-                    background:#16a34a;
-                    color:white;
-                    padding:14px;
-                    border-radius:10px;
-                    text-align:center;
-                    font-weight:800;
-                    animation: blink 0.35s alternate 3;
-                    margin-top:10px;
-                ">
-                    ✅ Produto adicionado ao carrinho
-                </div>
-
-                <style>
-                @keyframes blink {
-                    from { opacity: 0.35; }
-                    to { opacity: 1; }
-                }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
-
             st.session_state.selected_product = None
-            time.sleep(0.8)
+            st.session_state.produto_adicionado = True
+            time.sleep(0.3)
             st.rerun()
     else:
         if add_clicked:
