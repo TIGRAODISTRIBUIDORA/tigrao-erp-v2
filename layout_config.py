@@ -9,17 +9,47 @@ LAYOUT_FILE = os.path.join(DATA_DIR, "layout.xlsx")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-
 DEFAULT_LAYOUT = {
-    "novo_fornecedor": 1.2,
-    "novo_produto": 2.4,
-    "novo_botao": 1.0,
-    "novo_espaco": 1.2,
-    "item_quantidade": 1.0,
-    "item_desconto": 1.0,
-    "item_total": 1.2,
-    "item_espaco": 1.8,
+    "novo_fornecedor_linha": 1,
+    "novo_fornecedor_coluna": 1,
+    "novo_fornecedor_largura": 1.2,
+
+    "novo_produto_linha": 1,
+    "novo_produto_coluna": 2,
+    "novo_produto_largura": 2.4,
+
+    "novo_botao_linha": 1,
+    "novo_botao_coluna": 3,
+    "novo_botao_largura": 1.0,
+
+    "novo_espaco_linha": 1,
+    "novo_espaco_coluna": 4,
+    "novo_espaco_largura": 1.2,
+
+    "item_quantidade_linha": 2,
+    "item_quantidade_coluna": 1,
+    "item_quantidade_largura": 1.0,
+
+    "item_desconto_linha": 2,
+    "item_desconto_coluna": 2,
+    "item_desconto_largura": 1.0,
+
+    "item_total_linha": 2,
+    "item_total_coluna": 3,
+    "item_total_largura": 1.2,
+
+    "item_espaco_linha": 2,
+    "item_espaco_coluna": 4,
+    "item_espaco_largura": 1.8,
 }
+
+
+def save_layout(layout):
+    df = pd.DataFrame([
+        {"campo": campo, "valor": valor}
+        for campo, valor in layout.items()
+    ])
+    df.to_excel(LAYOUT_FILE, index=False)
 
 
 def load_layout():
@@ -39,12 +69,31 @@ def load_layout():
         return DEFAULT_LAYOUT.copy()
 
 
-def save_layout(layout):
-    df = pd.DataFrame([
-        {"campo": campo, "valor": valor}
-        for campo, valor in layout.items()
-    ])
-    df.to_excel(LAYOUT_FILE, index=False)
+def _numero(label, layout, campo, min_value=0.0):
+    layout[campo] = st.number_input(
+        label,
+        min_value=min_value,
+        value=float(layout.get(campo, DEFAULT_LAYOUT.get(campo, 1))),
+        step=0.1,
+        key=campo
+    )
+
+
+def _componente(nome, layout, prefixo):
+    st.markdown(f"### {nome}")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        _numero("Linha", layout, f"{prefixo}_linha", 1.0)
+
+    with c2:
+        _numero("Coluna", layout, f"{prefixo}_coluna", 1.0)
+
+    with c3:
+        _numero("Largura", layout, f"{prefixo}_largura", 0.1)
+
+    st.markdown("---")
 
 
 def show_layout_config():
@@ -52,45 +101,58 @@ def show_layout_config():
         st.error("Acesso permitido somente para administrador.")
         st.stop()
 
-    title("⚙️ Layout do Sistema")
+    title("⚙️ Designer do Sistema")
 
-    st.info("Altere os números para mudar a largura dos campos na tela de Novo Pedido.")
+    st.info(
+        "Aqui você define onde cada campo vai aparecer. "
+        "Linha muda a altura. Coluna muda a posição lateral. "
+        "Largura muda o tamanho do campo."
+    )
 
     layout = load_layout()
 
-    st.markdown("### 🛒 Novo Pedido - Busca de Produto")
+    tela = st.selectbox(
+        "Escolha a tela para editar",
+        [
+            "Novo Pedido",
+            "Produtos",
+            "Clientes",
+            "Pedidos Lançados",
+            "Dashboard",
+            "Comissões",
+            "Fornecedores",
+            "Vendedores",
+        ]
+    )
 
-    c1, c2, c3, c4 = st.columns(4)
+    if tela == "Novo Pedido":
+        st.markdown("## 🛒 Novo Pedido")
 
-    with c1:
-        layout["novo_fornecedor"] = st.number_input("Fornecedor", value=float(layout["novo_fornecedor"]), step=0.1)
+        _componente("Fornecedor", layout, "novo_fornecedor")
+        _componente("Produto", layout, "novo_produto")
+        _componente("Botão Adicionar", layout, "novo_botao")
+        _componente("Espaço vazio", layout, "novo_espaco")
+        _componente("Quantidade", layout, "item_quantidade")
+        _componente("Desconto", layout, "item_desconto")
+        _componente("Total", layout, "item_total")
+        _componente("Espaço vazio do item", layout, "item_espaco")
 
-    with c2:
-        layout["novo_produto"] = st.number_input("Produto", value=float(layout["novo_produto"]), step=0.1)
+    else:
+        st.warning(
+            "Essa tela ainda não foi ligada ao Designer. "
+            "Primeiro vamos finalizar o Novo Pedido, depois ligamos as outras."
+        )
 
-    with c3:
-        layout["novo_botao"] = st.number_input("Botão Adicionar", value=float(layout["novo_botao"]), step=0.1)
+    col1, col2, col3 = st.columns([1, 1, 3])
 
-    with c4:
-        layout["novo_espaco"] = st.number_input("Espaço vazio", value=float(layout["novo_espaco"]), step=0.1)
+    with col1:
+        if st.button("💾 Salvar Layout", use_container_width=True):
+            save_layout(layout)
+            st.success("Layout salvo com sucesso.")
+            st.rerun()
 
-    st.markdown("### 📦 Produto Selecionado")
-
-    q1, q2, q3, q4 = st.columns(4)
-
-    with q1:
-        layout["item_quantidade"] = st.number_input("Quantidade", value=float(layout["item_quantidade"]), step=0.1)
-
-    with q2:
-        layout["item_desconto"] = st.number_input("Desconto", value=float(layout["item_desconto"]), step=0.1)
-
-    with q3:
-        layout["item_total"] = st.number_input("Total", value=float(layout["item_total"]), step=0.1)
-
-    with q4:
-        layout["item_espaco"] = st.number_input("Espaço vazio item", value=float(layout["item_espaco"]), step=0.1)
-
-    if st.button("💾 Salvar Layout"):
-        save_layout(layout)
-        st.success("Layout salvo com sucesso.")
-        st.rerun()
+    with col2:
+        if st.button("🔄 Restaurar Padrão", use_container_width=True):
+            save_layout(DEFAULT_LAYOUT.copy())
+            st.success("Layout padrão restaurado.")
+            st.rerun()
