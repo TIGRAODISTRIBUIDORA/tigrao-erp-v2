@@ -28,6 +28,9 @@ def show_new_order() -> None:
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = []
 
+    if "produto_pedido_selecionado" not in st.session_state:
+        st.session_state.produto_pedido_selecionado = None
+
     if len(products) == 0:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
@@ -43,7 +46,10 @@ def show_new_order() -> None:
         client = st.selectbox("Cliente", client_list)
 
     with c2:
-        seller = st.text_input("Vendedor", value=st.session_state.get("vendedor", ""))
+        seller = st.text_input(
+            "Vendedor",
+            value=st.session_state.get("vendedor", "")
+        )
 
     search = st.text_input("🔍 Buscar produto por código, nome ou fornecedor")
 
@@ -58,97 +64,132 @@ def show_new_order() -> None:
 
     st.markdown("### Sugestões de produtos")
 
-    for _, row in filtered.head(8).iterrows():
-        col_info, col_qty, col_discount, col_button = st.columns([5, 1.2, 1.4, 1.8])
+    if len(filtered) == 0:
+        st.info("Nenhum produto encontrado.")
+    else:
+        opcoes = []
 
-        codigo = str(row.get("codigo", ""))
-        produto = str(row.get("produto", ""))
-        fornecedor = str(row.get("fornecedor", ""))
-        unidade = str(row.get("un", "UN"))
+        for _, row in filtered.head(8).iterrows():
+            codigo = str(row.get("codigo", ""))
+            produto = str(row.get("produto", ""))
+            fornecedor = str(row.get("fornecedor", ""))
+
+            try:
+                preco = float(row.get("preco", 0))
+            except Exception:
+                preco = 0.0
+
+            opcoes.append(
+                f"{codigo} - {produto} | {money(preco)} | Fornecedor: {fornecedor}"
+            )
+
+        produto_texto = st.radio(
+            "Selecione um produto",
+            opcoes,
+            label_visibility="collapsed"
+        )
+
+        if produto_texto:
+            indice = opcoes.index(produto_texto)
+            produto_escolhido = filtered.head(8).iloc[indice].to_dict()
+            st.session_state.produto_pedido_selecionado = produto_escolhido
+
+    if st.session_state.produto_pedido_selecionado:
+        product = st.session_state.produto_pedido_selecionado
+
+        codigo = str(product.get("codigo", ""))
+        produto = str(product.get("produto", ""))
+        fornecedor = str(product.get("fornecedor", ""))
+        unidade = str(product.get("un", "UN"))
 
         try:
-            preco = float(row.get("preco", 0))
+            price = float(product.get("preco", 0))
         except Exception:
-            preco = 0.0
+            price = 0.0
 
-        safe_key = f"{codigo}_{produto}".replace(" ", "_").replace("/", "_").replace(".", "_")
+        st.markdown("---")
+        st.markdown("### Produto selecionado")
 
-        with col_info:
-            st.markdown(
-                f"""
-                <div class='sugestao'>
-                    <span class='codigo'>{codigo}</span> - {produto} | {money(preco)}<br>
-                    <small>Fornecedor: {fornecedor}</small>
+        st.markdown(
+            f"""
+            <div class='card'>
+                <b>{codigo} - {produto}</b><br>
+                Preço: {money(price)}<br>
+                Fornecedor: {fornecedor}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        q1, q2, q3 = st.columns(3)
+
+        with q1:
+            quantity = st.number_input(
+                "Quantidade",
+                min_value=1,
+                value=1,
+                step=1
+            )
+
+        with q2:
+            discount = st.number_input(
+                "% Desconto",
+                min_value=0.0,
+                value=0.0,
+                step=1.0
+            )
+
+        with q3:
+            subtotal = price * quantity
+            total = subtotal - (subtotal * discount / 100)
+            st.text_input(
+                "Total do item",
+                value=money(total),
+                disabled=True
+            )
+
+        flash_area = st.empty()
+
+        if st.button("➕ Adicionar ao pedido"):
+            st.session_state.carrinho.append({
+                "codigo": codigo,
+                "produto": produto,
+                "un": unidade,
+                "quantidade": quantity,
+                "preco": price,
+                "desconto": discount,
+                "subtotal": subtotal,
+                "total": total,
+            })
+
+            flash_area.markdown(
+                """
+                <div style="
+                    background:#16a34a;
+                    color:white;
+                    padding:14px;
+                    border-radius:10px;
+                    text-align:center;
+                    font-weight:800;
+                    animation: blink 0.35s alternate 3;
+                    margin-top:10px;
+                ">
+                    ✅ Produto adicionado ao carrinho
                 </div>
+
+                <style>
+                @keyframes blink {
+                    from { opacity: 0.35; }
+                    to { opacity: 1; }
+                }
+                </style>
                 """,
                 unsafe_allow_html=True,
             )
 
-        with col_qty:
-            quantity = st.number_input(
-                "Qtd",
-                min_value=1,
-                value=1,
-                step=1,
-                key=f"qty_{safe_key}",
-            )
-
-        with col_discount:
-            discount = st.number_input(
-                "% Desc.",
-                min_value=0.0,
-                value=0.0,
-                step=1.0,
-                key=f"disc_{safe_key}",
-            )
-
-        with col_button:
-            st.write("")
-            st.write("")
-
-            flash_area = st.empty()
-
-            if st.button("➕ Adicionar", key=f"add_{safe_key}"):
-                subtotal = preco * quantity
-                total = subtotal - (subtotal * discount / 100)
-
-                st.session_state.carrinho.append({
-                    "codigo": codigo,
-                    "produto": produto,
-                    "un": unidade,
-                    "quantidade": quantity,
-                    "preco": preco,
-                    "desconto": discount,
-                    "subtotal": subtotal,
-                    "total": total,
-                })
-
-                flash_area.markdown(
-                    """
-                    <div style="
-                        background:#16a34a;
-                        color:white;
-                        padding:12px;
-                        border-radius:10px;
-                        text-align:center;
-                        font-weight:800;
-                        animation: piscar 0.35s alternate 3;
-                    ">
-                        ✅ Adicionado
-                    </div>
-
-                    <style>
-                    @keyframes piscar {
-                        from { opacity: 0.35; }
-                        to { opacity: 1; }
-                    }
-                    </style>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-                time.sleep(0.8)
-                st.rerun()
+            st.session_state.produto_pedido_selecionado = None
+            time.sleep(0.8)
+            st.rerun()
 
     st.markdown("---")
     st.markdown(f"### Carrinho ({len(st.session_state.carrinho)} itens)")
@@ -208,6 +249,7 @@ def show_new_order() -> None:
                 save_table(orders, ORDERS_FILE)
 
                 st.session_state.carrinho = []
+                st.session_state.produto_pedido_selecionado = None
 
                 st.success(f"Pedido nº {number} salvo com sucesso!")
                 st.rerun()
@@ -215,6 +257,7 @@ def show_new_order() -> None:
     with f2:
         if st.button("🗑️ LIMPAR PEDIDO"):
             st.session_state.carrinho = []
+            st.session_state.produto_pedido_selecionado = None
             st.rerun()
 
 
