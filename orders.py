@@ -16,6 +16,42 @@ from database import (
 from ui import is_admin, metric_card, title
 
 
+# =========================
+# CONFIGURAÇÃO DO LAYOUT
+# =========================
+# Quanto maior o número, maior fica o quadrado/campo.
+# Para empurrar algo para a direita, aumente o campo de espaço.
+# Para trazer para a esquerda, diminua o espaço.
+
+NOVO_PEDIDO_CLIENTE = [2, 2]
+
+NOVO_PEDIDO_BUSCA = [
+    1.2,  # Fornecedor
+    2.4,  # Produto
+    1.0,  # Botão adicionar
+    1.2,  # Espaço vazio
+]
+
+NOVO_PEDIDO_ITEM = [
+    1.0,  # Quantidade
+    1.0,  # Desconto
+    1.2,  # Total do item
+    1.8,  # Espaço vazio
+]
+
+NOVO_PEDIDO_BOTOES = [
+    1.2,  # Finalizar pedido
+    1.2,  # Limpar pedido
+    2.0,  # Espaço vazio
+]
+
+ALTERAR_PEDIDO_BUSCA = [
+    1.2,  # Fornecedor
+    2.4,  # Produto
+    2.2,  # Espaço vazio
+]
+
+
 def _safe_float(value):
     try:
         return float(value)
@@ -151,7 +187,7 @@ def show_new_order() -> None:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
 
-    col_cliente, col_vazio = st.columns([2, 2])
+    col_cliente, col_vazio = st.columns(NOVO_PEDIDO_CLIENTE)
 
     with col_cliente:
         client_list = (
@@ -163,7 +199,7 @@ def show_new_order() -> None:
 
     st.markdown("---")
 
-    supplier_col, search_col, button_col, empty_col = st.columns([1.2, 2.4, 1, 1.2])
+    supplier_col, search_col, button_col, empty_col = st.columns(NOVO_PEDIDO_BUSCA)
 
     with supplier_col:
         supplier_filter = st.selectbox(
@@ -239,7 +275,7 @@ def show_new_order() -> None:
             unsafe_allow_html=True,
         )
 
-        q1, q2, q3, q4 = st.columns([1, 1, 1.2, 1.8])
+        q1, q2, q3, q4 = st.columns(NOVO_PEDIDO_ITEM)
 
         with q1:
             quantity = st.number_input(
@@ -302,7 +338,7 @@ def show_new_order() -> None:
     else:
         st.info("Nenhum produto adicionado ao pedido.")
 
-    f1, f2, f3 = st.columns([1.2, 1.2, 2])
+    f1, f2, f3 = st.columns(NOVO_PEDIDO_BOTOES)
 
     with f1:
         if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
@@ -435,7 +471,7 @@ def edit_order() -> None:
     st.markdown("---")
     st.markdown("### ➕ Adicionar novo produto ao pedido")
 
-    supplier_col, product_col, empty_col = st.columns([1.2, 2.4, 2.2])
+    supplier_col, product_col, empty_col = st.columns(ALTERAR_PEDIDO_BUSCA)
 
     with supplier_col:
         edit_supplier_filter = st.selectbox(
