@@ -8,6 +8,7 @@ from login import login_screen, logout
 from orders import show_new_order, show_orders
 from products import show_import_products, show_products
 from suppliers import show_suppliers
+from users import show_users
 from ui import apply_style, is_admin
 
 st.set_page_config(page_title="Tigrão ERP", page_icon="🐯", layout="wide")
@@ -28,6 +29,7 @@ if is_admin():
         "Clientes",
         "Produtos",
         "Fornecedores",
+        "Vendedores",
         "Importar Produtos",
         "Comissões",
         "Sair",
@@ -46,19 +48,30 @@ menu = st.sidebar.radio("Menu", menu_options)
 
 if menu == "Sair":
     logout()
+
 elif menu == "Dashboard":
     show_dashboard()
+
 elif menu == "Novo Pedido":
     show_new_order()
+
 elif menu == "Pedidos Lançados":
     show_orders()
+
 elif menu == "Clientes":
     show_clients()
+
 elif menu == "Produtos":
     show_products()
+
 elif menu == "Fornecedores":
     show_suppliers()
+
+elif menu == "Vendedores":
+    show_users()
+
 elif menu == "Importar Produtos":
     show_import_products()
+
 elif menu == "Comissões":
     show_commissions()
