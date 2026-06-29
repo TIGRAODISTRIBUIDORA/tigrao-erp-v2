@@ -12,23 +12,16 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 
 
 def _prepare_products(df):
-    if "codigo" not in df.columns:
-        df["codigo"] = ""
-
-    if "produto" not in df.columns:
-        df["produto"] = ""
-
-    if "un" not in df.columns:
-        df["un"] = "UN"
-
-    if "preco" not in df.columns:
-        df["preco"] = 0
-
-    if "fornecedor" not in df.columns:
-        df["fornecedor"] = ""
-
-    if "imagem" not in df.columns:
-        df["imagem"] = ""
+    for col, default in {
+        "codigo": "",
+        "produto": "",
+        "un": "UN",
+        "preco": 0,
+        "fornecedor": "",
+        "imagem": "",
+    }.items():
+        if col not in df.columns:
+            df[col] = default
 
     df["codigo"] = df["codigo"].astype(str).str.strip()
     df["produto"] = df["produto"].astype(str).str.strip()
@@ -38,7 +31,7 @@ def _prepare_products(df):
     df["preco"] = pd.to_numeric(df["preco"], errors="coerce").fillna(0)
 
     df = df[df["produto"] != ""]
-    df = df.drop_duplicates(subset=["codigo", "produto", "preco", "fornecedor"], keep="last")
+    df = df.drop_duplicates(subset=["codigo"], keep="last")
 
     return df.reset_index(drop=True)
 
@@ -75,41 +68,21 @@ def _save_uploaded_image(uploaded_file, codigo):
     return path
 
 
-def _product_options(products):
-    options = ["Selecione ou digite o produto"]
-    vistos = set()
+def _filter_products(products, search):
+    search = str(search).strip().lower()
 
-    for idx, row in products.iterrows():
-        codigo = str(row.get("codigo", "")).strip()
-        produto = str(row.get("produto", "")).strip()
-        preco = _money(row.get("preco", 0))
-        fornecedor = str(row.get("fornecedor", "")).strip()
+    if not search:
+        return pd.DataFrame()
 
-        chave = f"{codigo}|{produto}|{preco}|{fornecedor}"
+    filtered = products[
+        products["codigo"].astype(str).str.lower().str.contains(search, na=False) |
+        products["produto"].astype(str).str.lower().str.contains(search, na=False) |
+        products["fornecedor"].astype(str).str.lower().str.contains(search, na=False)
+    ]
 
-        if chave in vistos:
-            continue
+    filtered = filtered.drop_duplicates(subset=["codigo"], keep="last")
 
-        vistos.add(chave)
-
-        options.append(
-            f"{idx} | {codigo} - {produto} | {preco} | {fornecedor}"
-        )
-
-    return options
-
-
-def _get_product_from_option(products, selected_text):
-    if selected_text == "Selecione ou digite o produto":
-        return None
-
-    try:
-        idx = int(str(selected_text).split("|")[0].strip())
-        if idx not in products.index:
-            return None
-        return products.loc[idx]
-    except Exception:
-        return None
+    return filtered.head(10).reset_index(drop=True)
 
 
 def show_products() -> None:
@@ -117,6 +90,9 @@ def show_products() -> None:
 
     products = read_table(PRODUCTS_FILE)
     products = _prepare_products(products)
+
+    if "produto_consulta_codigo" not in st.session_state:
+        st.session_state.produto_consulta_codigo = ""
 
     if is_admin():
         supplier_form_inline("products")
@@ -158,7 +134,6 @@ def show_products() -> None:
 
                 products = pd.concat([products, new], ignore_index=True)
                 products = _prepare_products(products)
-                products = products.drop_duplicates(subset=["codigo"], keep="last")
 
                 save_table(products, PRODUCTS_FILE)
 
@@ -191,17 +166,39 @@ def show_products() -> None:
     st.markdown("---")
     st.markdown("### 🔍 Consultar produto")
 
-    selected_text = st.selectbox(
-        "Buscar produto por código ou nome",
-        _product_options(products),
-        key="consulta_produto_selectbox",
+    search = st.text_input(
+        "Buscar produto por código, nome ou fornecedor",
         label_visibility="collapsed",
+        placeholder="Digite código, nome ou fornecedor"
     )
 
-    produto_selecionado = _get_product_from_option(products, selected_text)
+    filtered = _filter_products(products, search)
+
+    if search and len(filtered) == 0:
+        st.warning("Nenhum produto encontrado.")
+
+    if len(filtered):
+        st.markdown("### Resultado da busca")
+
+        for i, row in filtered.iterrows():
+            texto = f"{row['codigo']} - {row['produto']} | {_money(row['preco'])} | {row['fornecedor']}"
+
+            if st.button(texto, key=f"selecionar_produto_{i}", use_container_width=True):
+                st.session_state.produto_consulta_codigo = str(row["codigo"])
+                st.rerun()
+
+    produto_selecionado = None
+
+    if st.session_state.produto_consulta_codigo:
+        encontrado = products[
+            products["codigo"].astype(str) == str(st.session_state.produto_consulta_codigo)
+        ]
+
+        if len(encontrado):
+            produto_selecionado = encontrado.iloc[0]
 
     if produto_selecionado is None:
-        st.info("Digite ou selecione um produto para visualizar.")
+        st.info("Digite e selecione um produto para visualizar.")
         return
 
     codigo = str(produto_selecionado.get("codigo", "")).strip()
