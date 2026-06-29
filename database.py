@@ -12,6 +12,8 @@ ORDERS_FILE = os.path.join(DATA_DIR, "pedidos.xlsx")
 SUPPLIERS_FILE = os.path.join(DATA_DIR, "fornecedores.xlsx")
 CONFIG_FILE = os.path.join(DATA_DIR, "configuracoes.xlsx")
 
+COMMISSION_RATE = 0.07
+
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
@@ -99,11 +101,6 @@ def _get_config_value(chave, default=0):
 
 
 def next_order_number():
-    """
-    Gera numeração única e crescente.
-    Mesmo que um pedido seja excluído, o número não será reutilizado.
-    """
-
     orders = read_table(ORDERS_FILE)
 
     maior_pedido_existente = 0
