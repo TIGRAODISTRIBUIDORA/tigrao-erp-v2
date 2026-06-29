@@ -23,6 +23,62 @@ def _safe_float(value):
         return 0.0
 
 
+def _prepare_products(products):
+    if "codigo" not in products.columns:
+        products["codigo"] = ""
+
+    if "produto" not in products.columns:
+        products["produto"] = ""
+
+    if "un" not in products.columns:
+        products["un"] = "UN"
+
+    if "preco" not in products.columns:
+        products["preco"] = 0
+
+    if "fornecedor" not in products.columns:
+        products["fornecedor"] = ""
+
+    products["codigo"] = products["codigo"].astype(str).str.strip()
+    products["produto"] = products["produto"].astype(str).str.strip()
+    products["un"] = products["un"].astype(str).str.strip()
+    products["fornecedor"] = products["fornecedor"].astype(str).str.strip()
+    products["preco"] = pd.to_numeric(products["preco"], errors="coerce").fillna(0)
+
+    products = products[products["produto"] != ""]
+    products = products.drop_duplicates(
+        subset=["codigo", "produto", "preco", "fornecedor"],
+        keep="last"
+    )
+
+    return products.reset_index(drop=True)
+
+
+def _supplier_options(products):
+    fornecedores = []
+
+    if len(products) and "fornecedor" in products.columns:
+        fornecedores = sorted(
+            products["fornecedor"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .replace("", pd.NA)
+            .dropna()
+            .unique()
+            .tolist()
+        )
+
+    return ["Todos"] + fornecedores
+
+
+def _filter_by_supplier(products, supplier):
+    if supplier and supplier != "Todos":
+        return products[products["fornecedor"].astype(str).str.strip() == supplier].reset_index(drop=True)
+
+    return products.reset_index(drop=True)
+
+
 def _add_item_to_cart(product, quantity, discount):
     codigo = str(product.get("codigo", ""))
     produto = str(product.get("produto", ""))
@@ -77,10 +133,8 @@ def show_new_order() -> None:
     title("🛒 Novo Pedido")
 
     products = read_table(PRODUCTS_FILE)
+    products = _prepare_products(products)
     clients = read_table(CLIENTS_FILE)
-
-    if "fornecedor" not in products.columns:
-        products["fornecedor"] = ""
 
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = []
@@ -109,17 +163,26 @@ def show_new_order() -> None:
 
     st.markdown("---")
 
-    search_col, button_col, empty_col = st.columns([2.4, 1, 1.2])
+    supplier_col, search_col, button_col, empty_col = st.columns([1.2, 2.4, 1, 1.2])
+
+    with supplier_col:
+        supplier_filter = st.selectbox(
+            "Fornecedor",
+            _supplier_options(products),
+            key="novo_pedido_fornecedor",
+        )
+
+    filtered_products = _filter_by_supplier(products, supplier_filter)
 
     with search_col:
         selected_text = st.selectbox(
             "🔍 Buscar produto por código, nome ou fornecedor",
-            _product_options(products),
-            key="novo_pedido_produto_selectbox",
+            _product_options(filtered_products),
+            key=f"novo_pedido_produto_selectbox_{supplier_filter}",
             label_visibility="collapsed",
         )
 
-        product_selected = _get_product_from_option(products, selected_text)
+        product_selected = _get_product_from_option(filtered_products, selected_text)
         st.session_state.selected_product = product_selected
 
     with button_col:
@@ -290,9 +353,7 @@ def edit_order() -> None:
 
     orders = read_table(ORDERS_FILE)
     products = read_table(PRODUCTS_FILE)
-
-    if "fornecedor" not in products.columns:
-        products["fornecedor"] = ""
+    products = _prepare_products(products)
 
     if len(orders) == 0:
         st.info("Nenhum pedido disponível para alteração.")
@@ -374,14 +435,26 @@ def edit_order() -> None:
     st.markdown("---")
     st.markdown("### ➕ Adicionar novo produto ao pedido")
 
-    selected_text = st.selectbox(
-        "Buscar produto para adicionar",
-        _product_options(products),
-        key="edit_order_product_selectbox",
-        label_visibility="collapsed",
-    )
+    supplier_col, product_col, empty_col = st.columns([1.2, 2.4, 2.2])
 
-    product = _get_product_from_option(products, selected_text)
+    with supplier_col:
+        edit_supplier_filter = st.selectbox(
+            "Fornecedor",
+            _supplier_options(products),
+            key="edit_order_fornecedor",
+        )
+
+    edit_filtered_products = _filter_by_supplier(products, edit_supplier_filter)
+
+    with product_col:
+        selected_text = st.selectbox(
+            "Buscar produto para adicionar",
+            _product_options(edit_filtered_products),
+            key=f"edit_order_product_selectbox_{edit_supplier_filter}",
+            label_visibility="collapsed",
+        )
+
+    product = _get_product_from_option(edit_filtered_products, selected_text)
 
     if product:
         c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
