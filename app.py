@@ -33,6 +33,7 @@ if is_admin():
         "Vendedores",
         "Importar Produtos",
         "Comissões",
+        "Layout do Sistema",
         "Sair",
     ]
 else:
@@ -76,3 +77,6 @@ elif menu == "Importar Produtos":
 
 elif menu == "Comissões":
     show_commissions()
+
+elif menu == "Layout do Sistema":
+    show_layout_config()
