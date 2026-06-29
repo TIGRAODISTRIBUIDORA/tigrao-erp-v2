@@ -1,152 +1,65 @@
 import os
-import pandas as pd
+import json
 import streamlit as st
 
 from ui import is_admin, title
 
 DATA_DIR = "dados"
-LAYOUT_FILE = os.path.join(DATA_DIR, "layout.xlsx")
+LAYOUT_FILE = os.path.join(DATA_DIR, "layout_builder.json")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
-# =========================
-# LAYOUT PADRÃO
-# =========================
 DEFAULT_LAYOUT = {
-    # NOVO PEDIDO
-    "novo_pedido_fornecedor_linha": 1,
-    "novo_pedido_fornecedor_coluna": 1,
-    "novo_pedido_fornecedor_largura": 1.2,
-
-    "novo_pedido_produto_linha": 1,
-    "novo_pedido_produto_coluna": 2,
-    "novo_pedido_produto_largura": 2.4,
-
-    "novo_pedido_botao_adicionar_linha": 1,
-    "novo_pedido_botao_adicionar_coluna": 3,
-    "novo_pedido_botao_adicionar_largura": 1.0,
-
-    "novo_pedido_quantidade_linha": 2,
-    "novo_pedido_quantidade_coluna": 1,
-    "novo_pedido_quantidade_largura": 1.0,
-
-    "novo_pedido_desconto_linha": 2,
-    "novo_pedido_desconto_coluna": 2,
-    "novo_pedido_desconto_largura": 1.0,
-
-    "novo_pedido_total_linha": 2,
-    "novo_pedido_total_coluna": 3,
-    "novo_pedido_total_largura": 1.2,
-
-    # PRODUTOS
-    "produtos_busca_linha": 1,
-    "produtos_busca_coluna": 1,
-    "produtos_busca_largura": 2.0,
-
-    "produtos_botao_lupa_linha": 1,
-    "produtos_botao_lupa_coluna": 2,
-    "produtos_botao_lupa_largura": 0.5,
-
-    "produtos_card_linha": 2,
-    "produtos_card_coluna": 1,
-    "produtos_card_largura": 2.0,
-
-    "produtos_imagem_linha": 2,
-    "produtos_imagem_coluna": 2,
-    "produtos_imagem_largura": 1.0,
-
-    # CLIENTES
-    "clientes_busca_linha": 1,
-    "clientes_busca_coluna": 1,
-    "clientes_busca_largura": 2.0,
-
-    "clientes_card_linha": 2,
-    "clientes_card_coluna": 1,
-    "clientes_card_largura": 2.0,
-
-    # PEDIDOS LANÇADOS
-    "pedidos_busca_linha": 1,
-    "pedidos_busca_coluna": 1,
-    "pedidos_busca_largura": 2.0,
-
-    "pedidos_tabela_linha": 2,
-    "pedidos_tabela_coluna": 1,
-    "pedidos_tabela_largura": 3.0,
-
-    # DASHBOARD
-    "dashboard_cards_linha": 1,
-    "dashboard_cards_coluna": 1,
-    "dashboard_cards_largura": 3.0,
-
-    # COMISSÕES
-    "comissoes_busca_linha": 1,
-    "comissoes_busca_coluna": 1,
-    "comissoes_busca_largura": 2.0,
-
-    # FORNECEDORES
-    "fornecedores_busca_linha": 1,
-    "fornecedores_busca_coluna": 1,
-    "fornecedores_busca_largura": 2.0,
-
-    # VENDEDORES
-    "vendedores_busca_linha": 1,
-    "vendedores_busca_coluna": 1,
-    "vendedores_busca_largura": 2.0,
+    "Novo Pedido": {
+        "Cliente": {"linha": 1, "coluna": 1, "largura": 2, "mostrar": True},
+        "Fornecedor": {"linha": 2, "coluna": 1, "largura": 1.2, "mostrar": True},
+        "Produto": {"linha": 2, "coluna": 2, "largura": 2.4, "mostrar": True},
+        "Botão Adicionar": {"linha": 2, "coluna": 3, "largura": 1.0, "mostrar": True},
+        "Produto Selecionado": {"linha": 3, "coluna": 1, "largura": 4, "mostrar": True},
+        "Quantidade": {"linha": 4, "coluna": 1, "largura": 1, "mostrar": True},
+        "Desconto": {"linha": 4, "coluna": 2, "largura": 1, "mostrar": True},
+        "Total do Item": {"linha": 4, "coluna": 3, "largura": 1.2, "mostrar": True},
+        "Carrinho": {"linha": 5, "coluna": 1, "largura": 5, "mostrar": True},
+        "Finalizar Pedido": {"linha": 6, "coluna": 1, "largura": 1.2, "mostrar": True},
+        "Limpar Pedido": {"linha": 6, "coluna": 2, "largura": 1.2, "mostrar": True},
+    },
+    "Produtos": {
+        "Cadastrar Produto": {"linha": 1, "coluna": 1, "largura": 4, "mostrar": True},
+        "Exportar Produtos": {"linha": 2, "coluna": 1, "largura": 4, "mostrar": True},
+        "Consultar Produto": {"linha": 3, "coluna": 1, "largura": 2, "mostrar": True},
+        "Botão Buscar": {"linha": 3, "coluna": 2, "largura": 0.5, "mostrar": True},
+        "Card Produto": {"linha": 4, "coluna": 1, "largura": 2, "mostrar": True},
+        "Imagem Produto": {"linha": 4, "coluna": 2, "largura": 1, "mostrar": True},
+    },
+    "Clientes": {
+        "Cadastrar Cliente": {"linha": 1, "coluna": 1, "largura": 4, "mostrar": True},
+        "Buscar Cliente": {"linha": 2, "coluna": 1, "largura": 2, "mostrar": True},
+        "Card Cliente": {"linha": 3, "coluna": 1, "largura": 3, "mostrar": True},
+    },
+    "Pedidos Lançados": {
+        "Tabela Pedidos": {"linha": 1, "coluna": 1, "largura": 5, "mostrar": True},
+        "Baixar Excel": {"linha": 2, "coluna": 1, "largura": 1.5, "mostrar": True},
+        "Alterar Pedido": {"linha": 3, "coluna": 1, "largura": 5, "mostrar": True},
+        "Excluir Pedido": {"linha": 4, "coluna": 1, "largura": 3, "mostrar": True},
+    },
+    "Dashboard": {
+        "Cards": {"linha": 1, "coluna": 1, "largura": 5, "mostrar": True},
+        "Gráficos": {"linha": 2, "coluna": 1, "largura": 5, "mostrar": True},
+    },
+    "Comissões": {
+        "Resumo": {"linha": 1, "coluna": 1, "largura": 4, "mostrar": True},
+        "Tabela": {"linha": 2, "coluna": 1, "largura": 5, "mostrar": True},
+    },
+    "Fornecedores": {
+        "Cadastrar Fornecedor": {"linha": 1, "coluna": 1, "largura": 4, "mostrar": True},
+        "Lista Fornecedores": {"linha": 2, "coluna": 1, "largura": 5, "mostrar": True},
+    },
+    "Vendedores": {
+        "Cadastrar Vendedor": {"linha": 1, "coluna": 1, "largura": 4, "mostrar": True},
+        "Lista Vendedores": {"linha": 2, "coluna": 1, "largura": 5, "mostrar": True},
+    },
 }
-
-
-ABAS_SISTEMA = {
-    "Novo Pedido": [
-        ("Fornecedor", "novo_pedido_fornecedor"),
-        ("Produto", "novo_pedido_produto"),
-        ("Botão Adicionar", "novo_pedido_botao_adicionar"),
-        ("Quantidade", "novo_pedido_quantidade"),
-        ("Desconto", "novo_pedido_desconto"),
-        ("Total do Item", "novo_pedido_total"),
-    ],
-
-    "Produtos": [
-        ("Busca de Produto", "produtos_busca"),
-        ("Botão Lupa", "produtos_botao_lupa"),
-        ("Card do Produto", "produtos_card"),
-        ("Imagem do Produto", "produtos_imagem"),
-    ],
-
-    "Clientes": [
-        ("Busca de Cliente", "clientes_busca"),
-        ("Card do Cliente", "clientes_card"),
-    ],
-
-    "Pedidos Lançados": [
-        ("Busca de Pedido", "pedidos_busca"),
-        ("Tabela / Lista de Pedidos", "pedidos_tabela"),
-    ],
-
-    "Dashboard": [
-        ("Cards do Dashboard", "dashboard_cards"),
-    ],
-
-    "Comissões": [
-        ("Busca de Comissão", "comissoes_busca"),
-    ],
-
-    "Fornecedores": [
-        ("Busca de Fornecedor", "fornecedores_busca"),
-    ],
-
-    "Vendedores": [
-        ("Busca de Vendedor", "vendedores_busca"),
-    ],
-}
-
-
-def save_layout(layout):
-    df = pd.DataFrame([
-        {"campo": campo, "valor": valor}
-        for campo, valor in layout.items()
-    ])
-    df.to_excel(LAYOUT_FILE, index=False)
 
 
 def load_layout():
@@ -155,46 +68,31 @@ def load_layout():
         return DEFAULT_LAYOUT.copy()
 
     try:
-        df = pd.read_excel(LAYOUT_FILE)
+        with open(LAYOUT_FILE, "r", encoding="utf-8") as f:
+            saved = json.load(f)
+
         layout = DEFAULT_LAYOUT.copy()
 
-        for _, row in df.iterrows():
-            layout[str(row["campo"])] = float(row["valor"])
+        for tela, blocos in saved.items():
+            if tela not in layout:
+                layout[tela] = {}
+
+            for bloco, config in blocos.items():
+                layout[tela][bloco] = config
 
         return layout
     except Exception:
         return DEFAULT_LAYOUT.copy()
 
 
-def _numero(label, layout, campo, min_value=0.0):
-    layout[campo] = st.number_input(
-        label,
-        min_value=min_value,
-        value=float(layout.get(campo, DEFAULT_LAYOUT.get(campo, 1))),
-        step=0.1,
-        key=campo
-    )
+def save_layout(layout):
+    with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(layout, f, ensure_ascii=False, indent=4)
 
 
-def _editar_bloco(nome_bloco, layout, prefixo):
-    st.markdown(f"### {nome_bloco}")
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        _numero("Linha", layout, f"{prefixo}_linha", 1.0)
-
-    with c2:
-        _numero("Coluna", layout, f"{prefixo}_coluna", 1.0)
-
-    with c3:
-        _numero("Largura", layout, f"{prefixo}_largura", 0.1)
-
-    st.caption(
-        "Linha = altura do bloco | Coluna = posição lateral | Largura = tamanho do bloco"
-    )
-
-    st.markdown("---")
+def get_screen_layout(tela):
+    layout = load_layout()
+    return layout.get(tela, {})
 
 
 def show_layout_config():
@@ -202,26 +100,79 @@ def show_layout_config():
         st.error("Acesso permitido somente para administrador.")
         st.stop()
 
-    title("⚙️ Designer do Sistema")
+    title("🎨 Criar Layout")
 
-    st.info(
-        "Escolha a aba do sistema e ajuste os blocos dessa aba. "
-        "Depois clique em Salvar Layout."
-    )
+    st.info("Escolha a aba, selecione o bloco e defina onde ele deve aparecer.")
 
     layout = load_layout()
 
-    aba = st.selectbox(
-        "Escolha a aba que deseja editar",
-        list(ABAS_SISTEMA.keys())
+    tela = st.selectbox(
+        "Aba do sistema",
+        list(layout.keys())
     )
 
-    st.markdown(f"## 🧩 Aba: {aba}")
+    blocos = list(layout[tela].keys())
 
-    blocos = ABAS_SISTEMA.get(aba, [])
+    bloco = st.selectbox(
+        "Bloco da aba",
+        blocos
+    )
 
-    for nome_bloco, prefixo in blocos:
-        _editar_bloco(nome_bloco, layout, prefixo)
+    config = layout[tela][bloco]
+
+    st.markdown(f"### Editando: {tela} → {bloco}")
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        config["linha"] = st.number_input(
+            "Linha",
+            min_value=1,
+            value=int(config.get("linha", 1)),
+            step=1
+        )
+
+    with c2:
+        config["coluna"] = st.number_input(
+            "Coluna",
+            min_value=1,
+            value=int(config.get("coluna", 1)),
+            step=1
+        )
+
+    with c3:
+        config["largura"] = st.number_input(
+            "Largura",
+            min_value=0.1,
+            value=float(config.get("largura", 1)),
+            step=0.1
+        )
+
+    with c4:
+        config["mostrar"] = st.checkbox(
+            "Mostrar",
+            value=bool(config.get("mostrar", True))
+        )
+
+    layout[tela][bloco] = config
+
+    st.markdown("---")
+    st.markdown("### Prévia simples da aba")
+
+    preview = []
+
+    for nome, cfg in layout[tela].items():
+        if cfg.get("mostrar", True):
+            preview.append({
+                "Bloco": nome,
+                "Linha": cfg.get("linha", 1),
+                "Coluna": cfg.get("coluna", 1),
+                "Largura": cfg.get("largura", 1),
+                "Mostrar": cfg.get("mostrar", True),
+            })
+
+    preview = sorted(preview, key=lambda x: (x["Linha"], x["Coluna"]))
+    st.dataframe(preview, use_container_width=True, hide_index=True)
 
     col1, col2, col3 = st.columns([1, 1, 3])
 
@@ -233,6 +184,6 @@ def show_layout_config():
 
     with col2:
         if st.button("🔄 Restaurar Padrão", use_container_width=True):
-            save_layout(DEFAULT_LAYOUT.copy())
+            save_layout(DEFAULT_LAYOUT)
             st.success("Layout padrão restaurado.")
             st.rerun()
