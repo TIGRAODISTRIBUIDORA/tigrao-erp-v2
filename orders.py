@@ -23,6 +23,27 @@ def _safe_float(value):
         return 0.0
 
 
+def _add_item_to_cart(product, quantity, discount):
+    codigo = str(product.get("codigo", ""))
+    produto = str(product.get("produto", ""))
+    unidade = str(product.get("un", "UN"))
+    price = _safe_float(product.get("preco", 0))
+
+    subtotal = price * quantity
+    total = subtotal - (subtotal * discount / 100)
+
+    st.session_state.carrinho.append({
+        "codigo": codigo,
+        "produto": produto,
+        "un": unidade,
+        "quantidade": quantity,
+        "preco": price,
+        "desconto": discount,
+        "subtotal": subtotal,
+        "total": total,
+    })
+
+
 def show_new_order() -> None:
     title("🛒 Novo Pedido")
 
@@ -97,8 +118,6 @@ def show_new_order() -> None:
             )
             st.session_state.produto_adicionado = False
 
-    filtered = pd.DataFrame()
-
     if search.strip():
         filtered = products[
             products["produto"].astype(str).str.contains(search, case=False, na=False)
@@ -110,7 +129,8 @@ def show_new_order() -> None:
             options = []
             for _, row in filtered.iterrows():
                 options.append(
-                    f"{row.get('codigo', '')} - {row.get('produto', '')} | {money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
+                    f"{row.get('codigo', '')} - {row.get('produto', '')} | "
+                    f"{money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
                 )
 
             selected_text = st.radio(
@@ -164,17 +184,7 @@ def show_new_order() -> None:
             st.text_input("Total do item", value=money(total), disabled=True)
 
         if add_clicked:
-            st.session_state.carrinho.append({
-                "codigo": codigo,
-                "produto": produto,
-                "un": unidade,
-                "quantidade": quantity,
-                "preco": price,
-                "desconto": discount,
-                "subtotal": subtotal,
-                "total": total,
-            })
-
+            _add_item_to_cart(product, quantity, discount)
             st.session_state.selected_product = None
             st.session_state.produto_adicionado = True
             time.sleep(0.3)
@@ -198,10 +208,8 @@ def show_new_order() -> None:
 
         with r1:
             metric_card("Subtotal", money(subtotal_general))
-
         with r2:
             metric_card("Desconto", money(discount_general))
-
         with r3:
             metric_card("Total", money(total_general))
     else:
@@ -219,7 +227,6 @@ def show_new_order() -> None:
                 date = now_text()
 
                 rows = []
-
                 for item in st.session_state.carrinho:
                     rows.append({
                         "pedido": number,
@@ -253,6 +260,213 @@ def show_new_order() -> None:
             st.rerun()
 
 
+def edit_order() -> None:
+    st.markdown("---")
+    st.markdown("## ✏️ Alterar Pedido")
+
+    orders = read_table(ORDERS_FILE)
+    products = read_table(PRODUCTS_FILE)
+
+    if len(orders) == 0:
+        st.info("Nenhum pedido disponível para alteração.")
+        return
+
+    order_list = sorted(orders["pedido"].dropna().unique())
+    selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
+
+    order_items = orders[orders["pedido"] == selected_order].copy()
+
+    if len(order_items) == 0:
+        st.warning("Pedido não encontrado.")
+        return
+
+    status = str(order_items["status"].iloc[0]) if "status" in order_items.columns else "PENDENTE"
+
+    if status.upper() == "FATURADO" and not is_admin():
+        st.error("Pedido faturado não pode ser alterado pelo vendedor.")
+        return
+
+    st.info(
+        f"Pedido nº {selected_order} | Cliente: {order_items['cliente'].iloc[0]} | "
+        f"Status: {status}"
+    )
+
+    st.markdown("### Itens do pedido")
+
+    updated_rows = []
+
+    for idx, row in order_items.iterrows():
+        st.markdown("---")
+        c1, c2, c3, c4, c5 = st.columns([4, 1, 1, 1, 1])
+
+        with c1:
+            st.markdown(f"**{row['codigo']} - {row['produto']}**")
+            st.caption(f"Preço unitário: {money(_safe_float(row['preco']))}")
+
+        with c2:
+            new_qty = st.number_input(
+                "Qtd",
+                min_value=0,
+                value=int(row["quantidade"]),
+                step=1,
+                key=f"edit_qty_{selected_order}_{idx}",
+            )
+
+        with c3:
+            new_discount = st.number_input(
+                "% Desc.",
+                min_value=0.0,
+                value=_safe_float(row["desconto"]),
+                step=1.0,
+                key=f"edit_desc_{selected_order}_{idx}",
+            )
+
+        price = _safe_float(row["preco"])
+        subtotal = price * new_qty
+        total = subtotal - (subtotal * new_discount / 100)
+
+        with c4:
+            st.write("Total")
+            st.write(money(total))
+
+        with c5:
+            remove = st.checkbox("Excluir", key=f"remove_{selected_order}_{idx}")
+
+        if not remove and new_qty > 0:
+            new_row = row.to_dict()
+            new_row["quantidade"] = new_qty
+            new_row["desconto"] = new_discount
+            new_row["subtotal"] = subtotal
+            new_row["total"] = total
+            updated_rows.append(new_row)
+
+    st.markdown("---")
+    st.markdown("### ➕ Adicionar novo produto ao pedido")
+
+    if "edit_selected_product" not in st.session_state:
+        st.session_state.edit_selected_product = None
+
+    search = st.text_input("Buscar produto para adicionar", key="edit_order_search")
+
+    if search.strip():
+        if "fornecedor" not in products.columns:
+            products["fornecedor"] = ""
+
+        filtered = products[
+            products["produto"].astype(str).str.contains(search, case=False, na=False)
+            | products["codigo"].astype(str).str.contains(search, case=False, na=False)
+            | products["fornecedor"].astype(str).str.contains(search, case=False, na=False)
+        ].head(8)
+
+        if len(filtered):
+            options = []
+            for _, product in filtered.iterrows():
+                options.append(
+                    f"{product.get('codigo', '')} - {product.get('produto', '')} | "
+                    f"{money(_safe_float(product.get('preco', 0)))}"
+                )
+
+            selected_text = st.radio(
+                "Sugestões",
+                options,
+                key="edit_order_product_radio",
+            )
+
+            if selected_text:
+                idx = options.index(selected_text)
+                st.session_state.edit_selected_product = filtered.iloc[idx].to_dict()
+        else:
+            st.info("Nenhum produto encontrado.")
+
+    product = st.session_state.get("edit_selected_product")
+
+    if product:
+        c1, c2, c3, c4 = st.columns([4, 1, 1, 1])
+
+        price = _safe_float(product.get("preco", 0))
+
+        with c1:
+            st.markdown(f"**{product.get('codigo', '')} - {product.get('produto', '')}**")
+            st.caption(f"Preço: {money(price)}")
+
+        with c2:
+            add_qty = st.number_input(
+                "Qtd.",
+                min_value=1,
+                value=1,
+                step=1,
+                key="edit_add_qty",
+            )
+
+        with c3:
+            add_discount = st.number_input(
+                "% Desc.",
+                min_value=0.0,
+                value=0.0,
+                step=1.0,
+                key="edit_add_discount",
+            )
+
+        subtotal = price * add_qty
+        total = subtotal - (subtotal * add_discount / 100)
+
+        with c4:
+            st.write("Total")
+            st.write(money(total))
+
+        if st.button("➕ Adicionar produto ao pedido"):
+            base = order_items.iloc[0].to_dict()
+            new_item = {
+                "pedido": selected_order,
+                "data": base.get("data", now_text()),
+                "vendedor": base.get("vendedor", ""),
+                "cliente": base.get("cliente", ""),
+                "codigo": product.get("codigo", ""),
+                "produto": product.get("produto", ""),
+                "un": product.get("un", "UN"),
+                "quantidade": add_qty,
+                "preco": price,
+                "desconto": add_discount,
+                "subtotal": subtotal,
+                "total": total,
+                "status": status,
+            }
+
+            updated_rows.append(new_item)
+            st.session_state.edit_selected_product = None
+            st.success("Produto adicionado na alteração. Clique em Salvar Alterações.")
+            time.sleep(0.5)
+
+    st.markdown("---")
+
+    if len(updated_rows):
+        preview = pd.DataFrame(updated_rows)
+        st.markdown("### Prévia do pedido alterado")
+        st.dataframe(preview, use_container_width=True)
+
+        total_order = preview["total"].sum()
+        metric_card("Novo total do pedido", money(total_order))
+    else:
+        st.warning("O pedido ficará sem itens se salvar essa alteração.")
+
+    if st.button("💾 SALVAR ALTERAÇÕES DO PEDIDO"):
+        if len(updated_rows) == 0:
+            st.warning("Não é possível salvar pedido sem itens.")
+            return
+
+        all_orders = read_table(ORDERS_FILE)
+        all_orders = all_orders[all_orders["pedido"] != selected_order]
+
+        updated_df = pd.DataFrame(updated_rows)
+        all_orders = pd.concat([all_orders, updated_df], ignore_index=True)
+
+        save_table(all_orders, ORDERS_FILE)
+
+        st.success(f"Pedido nº {selected_order} atualizado com sucesso!")
+        time.sleep(0.8)
+        st.rerun()
+
+
 def show_orders() -> None:
     title("📋 Pedidos Lançados")
 
@@ -269,6 +483,8 @@ def show_orders() -> None:
         to_excel_bytes(orders),
         file_name="pedidos_tigrao.xlsx",
     )
+
+    edit_order()
 
     if is_admin():
         st.markdown("---")
