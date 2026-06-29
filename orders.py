@@ -173,8 +173,8 @@ def show_new_order() -> None:
         with q1:
             quantity = st.number_input(
                 "Quantidade",
-                min_value=1,
-                value=1,
+                min_value=0,
+                value=0,
                 step=1
             )
 
@@ -197,11 +197,14 @@ def show_new_order() -> None:
             )
 
         if add_clicked:
-            _add_item_to_cart(product, quantity, discount)
-            st.session_state.selected_product = None
-            st.session_state.produto_adicionado = True
-            time.sleep(0.3)
-            st.rerun()
+            if quantity <= 0:
+                st.warning("Informe a quantidade antes de adicionar.")
+            else:
+                _add_item_to_cart(product, quantity, discount)
+                st.session_state.selected_product = None
+                st.session_state.produto_adicionado = True
+                time.sleep(0.3)
+                st.rerun()
     else:
         if add_clicked:
             st.warning("Selecione um produto antes de adicionar.")
