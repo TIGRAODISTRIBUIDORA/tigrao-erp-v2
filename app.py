@@ -33,6 +33,7 @@ if is_admin():
         "Vendedores",
         "Importar Produtos",
         "Comissões",
+        layout do sistema",
         "Sair",
     ]
 else:
