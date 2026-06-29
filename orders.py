@@ -23,17 +23,6 @@ def _safe_float(value):
         return 0.0
 
 
-def _safe_key(value):
-    return (
-        str(value)
-        .replace(" ", "_")
-        .replace("/", "_")
-        .replace(".", "_")
-        .replace("-", "_")
-        .replace(",", "_")
-    )
-
-
 def show_new_order() -> None:
     title("🛒 Novo Pedido")
 
@@ -46,11 +35,8 @@ def show_new_order() -> None:
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = []
 
-    if "produto_pedido_selecionado" not in st.session_state:
-        st.session_state.produto_pedido_selecionado = None
-
-    if "pedido_search" not in st.session_state:
-        st.session_state.pedido_search = ""
+    if "selected_product" not in st.session_state:
+        st.session_state.selected_product = None
 
     if len(products) == 0:
         st.warning("Nenhum produto cadastrado.")
@@ -67,30 +53,19 @@ def show_new_order() -> None:
         client = st.selectbox("Cliente", client_list)
 
     with c2:
-        seller = st.text_input(
-            "Vendedor",
-            value=st.session_state.get("vendedor", "")
-        )
+        seller = st.text_input("Vendedor", value=st.session_state.get("vendedor", ""))
 
     st.markdown("---")
 
-    busca_col, botao_col = st.columns([2, 1])
+    search_col, button_col = st.columns([3, 1])
 
-    with busca_col:
-        search = st.text_input(
-            "🔍 Buscar produto por código, nome ou fornecedor",
-            key="pedido_search"
-        )
+    with search_col:
+        search = st.text_input("🔍 Buscar produto por código, nome ou fornecedor")
 
-    with botao_col:
+    with button_col:
         st.write("")
         st.write("")
-        adicionar_clicado = st.button(
-            "➕ ADICIONAR AO PEDIDO",
-            use_container_width=True
-        )
-
-    st.markdown("### Sugestões de produtos")
+        add_clicked = st.button("➕ ADICIONAR", use_container_width=True)
 
     filtered = pd.DataFrame()
 
@@ -101,35 +76,28 @@ def show_new_order() -> None:
             | products["fornecedor"].astype(str).str.contains(search, case=False, na=False)
         ].head(8)
 
-        if len(filtered) == 0:
-            st.info("Nenhum produto encontrado.")
-        else:
+        if len(filtered):
             options = []
-
             for _, row in filtered.iterrows():
-                codigo = str(row.get("codigo", ""))
-                produto = str(row.get("produto", ""))
-                fornecedor = str(row.get("fornecedor", ""))
-                preco = _safe_float(row.get("preco", 0))
-
                 options.append(
-                    f"{codigo} - {produto} | {money(preco)} | Fornecedor: {fornecedor}"
+                    f"{row.get('codigo', '')} - {row.get('produto', '')} | {money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
                 )
 
             selected_text = st.radio(
-                "Selecione um produto",
+                "Sugestões de produtos",
                 options,
-                label_visibility="collapsed",
-                key="produto_radio"
+                label_visibility="visible",
             )
 
             if selected_text:
-                selected_index = options.index(selected_text)
-                st.session_state.produto_pedido_selecionado = filtered.iloc[selected_index].to_dict()
+                idx = options.index(selected_text)
+                st.session_state.selected_product = filtered.iloc[idx].to_dict()
+        else:
+            st.info("Nenhum produto encontrado.")
     else:
-        st.info("Digite o nome, código ou fornecedor para buscar produtos.")
+        st.info("Digite para buscar produtos.")
 
-    product = st.session_state.get("produto_pedido_selecionado")
+    product = st.session_state.get("selected_product")
 
     if product:
         codigo = str(product.get("codigo", ""))
@@ -138,7 +106,6 @@ def show_new_order() -> None:
         unidade = str(product.get("un", "UN"))
         price = _safe_float(product.get("preco", 0))
 
-        st.markdown("---")
         st.markdown("### Produto selecionado")
 
         st.markdown(
@@ -154,39 +121,19 @@ def show_new_order() -> None:
 
         q1, q2, q3 = st.columns(3)
 
-        key_base = _safe_key(f"{codigo}_{produto}")
-
         with q1:
-            quantity = st.number_input(
-                "Quantidade",
-                min_value=1,
-                value=1,
-                step=1,
-                key=f"qtd_{key_base}",
-            )
+            quantity = st.number_input("Quantidade", min_value=1, value=1, step=1)
 
         with q2:
-            discount = st.number_input(
-                "% Desconto",
-                min_value=0.0,
-                value=0.0,
-                step=1.0,
-                key=f"desc_{key_base}",
-            )
+            discount = st.number_input("% Desconto", min_value=0.0, value=0.0, step=1.0)
 
         subtotal = price * quantity
         total = subtotal - (subtotal * discount / 100)
 
         with q3:
-            st.text_input(
-                "Total do item",
-                value=money(total),
-                disabled=True
-            )
+            st.text_input("Total do item", value=money(total), disabled=True)
 
-        flash_area = st.empty()
-
-        if adicionar_clicado:
+        if add_clicked:
             st.session_state.carrinho.append({
                 "codigo": codigo,
                 "produto": produto,
@@ -198,7 +145,7 @@ def show_new_order() -> None:
                 "total": total,
             })
 
-            flash_area.markdown(
+            st.markdown(
                 """
                 <div style="
                     background:#16a34a;
@@ -223,22 +170,19 @@ def show_new_order() -> None:
                 unsafe_allow_html=True,
             )
 
-            st.session_state.produto_pedido_selecionado = None
-            st.session_state.pedido_search = ""
-
+            st.session_state.selected_product = None
             time.sleep(0.8)
             st.rerun()
-
     else:
-        if adicionar_clicado:
-            st.warning("Selecione um produto antes de adicionar ao pedido.")
+        if add_clicked:
+            st.warning("Selecione um produto antes de adicionar.")
 
     st.markdown("---")
     st.markdown(f"### Carrinho ({len(st.session_state.carrinho)} itens)")
 
     if len(st.session_state.carrinho):
         cart = pd.DataFrame(st.session_state.carrinho)
-        st.dataframe(cart, use_container_width=True)
+        st.dataframe(cart, use_container_width=True, height=320)
 
         subtotal_general = cart["subtotal"].sum()
         total_general = cart["total"].sum()
@@ -291,8 +235,7 @@ def show_new_order() -> None:
                 save_table(orders, ORDERS_FILE)
 
                 st.session_state.carrinho = []
-                st.session_state.produto_pedido_selecionado = None
-                st.session_state.pedido_search = ""
+                st.session_state.selected_product = None
 
                 st.success(f"Pedido nº {number} salvo com sucesso!")
                 st.rerun()
@@ -300,8 +243,7 @@ def show_new_order() -> None:
     with f2:
         if st.button("🗑️ LIMPAR PEDIDO"):
             st.session_state.carrinho = []
-            st.session_state.produto_pedido_selecionado = None
-            st.session_state.pedido_search = ""
+            st.session_state.selected_product = None
             st.rerun()
 
 
@@ -327,10 +269,7 @@ def show_orders() -> None:
         st.markdown("### 🗑️ Excluir Pedido")
 
         order_list = sorted(orders["pedido"].dropna().unique())
-        selected = st.selectbox(
-            "Selecione o número do pedido que deseja excluir",
-            order_list
-        )
+        selected = st.selectbox("Selecione o número do pedido que deseja excluir", order_list)
 
         order_data = orders[orders["pedido"] == selected]
 
@@ -341,9 +280,7 @@ def show_orders() -> None:
                 f"total {money(order_data['total'].sum())}."
             )
 
-        confirm = st.checkbox(
-            f"Confirmo que desejo excluir o pedido nº {selected}"
-        )
+        confirm = st.checkbox(f"Confirmo que desejo excluir o pedido nº {selected}")
 
         if st.button("🗑️ EXCLUIR PEDIDO"):
             if not confirm:
