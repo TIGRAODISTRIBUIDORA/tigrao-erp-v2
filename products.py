@@ -12,13 +12,35 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 
 
 def _prepare_products(df):
+    if "codigo" not in df.columns:
+        df["codigo"] = ""
+
+    if "produto" not in df.columns:
+        df["produto"] = ""
+
+    if "un" not in df.columns:
+        df["un"] = "UN"
+
+    if "preco" not in df.columns:
+        df["preco"] = 0
+
     if "fornecedor" not in df.columns:
         df["fornecedor"] = ""
 
     if "imagem" not in df.columns:
         df["imagem"] = ""
 
-    return df
+    df["codigo"] = df["codigo"].astype(str).str.strip()
+    df["produto"] = df["produto"].astype(str).str.strip()
+    df["un"] = df["un"].astype(str).str.strip()
+    df["fornecedor"] = df["fornecedor"].astype(str).str.strip()
+    df["imagem"] = df["imagem"].astype(str).str.strip()
+    df["preco"] = pd.to_numeric(df["preco"], errors="coerce").fillna(0)
+
+    df = df[df["produto"] != ""]
+    df = df.drop_duplicates(subset=["codigo", "produto", "preco", "fornecedor"], keep="last")
+
+    return df.reset_index(drop=True)
 
 
 def _safe_float(value):
@@ -26,6 +48,10 @@ def _safe_float(value):
         return float(value)
     except Exception:
         return 0.0
+
+
+def _money(value):
+    return f"R$ {_safe_float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
 def _safe_filename(value):
@@ -51,31 +77,39 @@ def _save_uploaded_image(uploaded_file, codigo):
 
 def _product_options(products):
     options = ["Selecione ou digite o produto"]
+    vistos = set()
 
-    for _, row in products.iterrows():
+    for idx, row in products.iterrows():
+        codigo = str(row.get("codigo", "")).strip()
+        produto = str(row.get("produto", "")).strip()
+        preco = _money(row.get("preco", 0))
+        fornecedor = str(row.get("fornecedor", "")).strip()
+
+        chave = f"{codigo}|{produto}|{preco}|{fornecedor}"
+
+        if chave in vistos:
+            continue
+
+        vistos.add(chave)
+
         options.append(
-            f"{row.get('codigo', '')} - {row.get('produto', '')} | "
-            f"R$ {_safe_float(row.get('preco', 0)):.2f} | {row.get('fornecedor', '')}"
+            f"{idx} | {codigo} - {produto} | {preco} | {fornecedor}"
         )
 
     return options
 
 
 def _get_product_from_option(products, selected_text):
-    options = _product_options(products)
-
     if selected_text == "Selecione ou digite o produto":
         return None
 
-    if selected_text not in options:
+    try:
+        idx = int(str(selected_text).split("|")[0].strip())
+        if idx not in products.index:
+            return None
+        return products.loc[idx]
+    except Exception:
         return None
-
-    idx = options.index(selected_text) - 1
-
-    if idx < 0:
-        return None
-
-    return products.iloc[idx]
 
 
 def show_products() -> None:
@@ -123,7 +157,9 @@ def show_products() -> None:
                 }])
 
                 products = pd.concat([products, new], ignore_index=True)
+                products = _prepare_products(products)
                 products = products.drop_duplicates(subset=["codigo"], keep="last")
+
                 save_table(products, PRODUCTS_FILE)
 
                 st.success("Produto salvo.")
@@ -187,7 +223,7 @@ def show_products() -> None:
                 <b>Código:</b> {codigo}<br>
                 <b>Produto:</b> {produto}<br>
                 <b>Unidade:</b> {un}<br>
-                <b>Preço:</b> R$ {preco:.2f}<br>
+                <b>Preço:</b> {_money(preco)}<br>
                 <b>Fornecedor:</b> {fornecedor}
             </div>
             """,
@@ -315,7 +351,8 @@ def show_import_products() -> None:
     df["imagem"] = df["imagem"].astype(str).str.strip()
     df["preco"] = pd.to_numeric(df["preco"], errors="coerce").fillna(0)
 
-    df = df[df["produto"] != ""].drop_duplicates(subset=["codigo"], keep="last")
+    df = df[df["produto"] != ""]
+    df = df.drop_duplicates(subset=["codigo"], keep="last")
 
     st.markdown("### Pré-visualização")
     st.dataframe(df, use_container_width=True)
@@ -334,6 +371,9 @@ def show_import_products() -> None:
             ], ignore_index=True)
         else:
             final = df
+
+        final = _prepare_products(final)
+        final = final.drop_duplicates(subset=["codigo"], keep="last")
 
         save_table(final, PRODUCTS_FILE)
 
