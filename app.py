@@ -9,7 +9,7 @@ from orders import show_new_order, show_orders
 from products import show_import_products, show_products
 from suppliers import show_suppliers
 from users import show_users
-from layout_config import show_layout_config
+from visual_designer import show_visual_designer
 from ui import apply_style, is_admin
 
 st.set_page_config(page_title="Tigrão ERP", page_icon="🐯", layout="wide")
@@ -33,7 +33,7 @@ if is_admin():
         "Vendedores",
         "Importar Produtos",
         "Comissões",
-        "Layout do Sistema",
+        "🎨 Designer Visual",
         "Sair",
     ]
 else:
@@ -78,5 +78,5 @@ elif menu == "Importar Produtos":
 elif menu == "Comissões":
     show_commissions()
 
-elif menu == "Layout do Sistema":
-    show_layout_config()
+elif menu == "🎨 Designer Visual":
+    show_visual_designer()
