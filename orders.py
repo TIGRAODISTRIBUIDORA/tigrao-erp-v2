@@ -13,42 +13,9 @@ from database import (
     save_table,
     to_excel_bytes,
 )
-from layout_config import load_layout
+from layout_config import get_screen_layout
+from layout_engine import renderizar_linha
 from ui import is_admin, metric_card, title
-
-
-def _layout_values():
-    layout = load_layout()
-
-    return {
-        "cliente": [2, 2],
-
-        "novo_busca": [
-            float(layout.get("novo_fornecedor", 1.2)),
-            float(layout.get("novo_produto", 2.4)),
-            float(layout.get("novo_botao", 1.0)),
-            float(layout.get("novo_espaco", 1.2)),
-        ],
-
-        "novo_item": [
-            float(layout.get("item_quantidade", 1.0)),
-            float(layout.get("item_desconto", 1.0)),
-            float(layout.get("item_total", 1.2)),
-            float(layout.get("item_espaco", 1.8)),
-        ],
-
-        "novo_botoes": [
-            1.2,
-            1.2,
-            2.0,
-        ],
-
-        "alterar_busca": [
-            float(layout.get("novo_fornecedor", 1.2)),
-            float(layout.get("novo_produto", 2.4)),
-            2.2,
-        ],
-    }
 
 
 def _safe_float(value):
@@ -61,16 +28,12 @@ def _safe_float(value):
 def _prepare_products(products):
     if "codigo" not in products.columns:
         products["codigo"] = ""
-
     if "produto" not in products.columns:
         products["produto"] = ""
-
     if "un" not in products.columns:
         products["un"] = "UN"
-
     if "preco" not in products.columns:
         products["preco"] = 0
-
     if "fornecedor" not in products.columns:
         products["fornecedor"] = ""
 
@@ -91,7 +54,6 @@ def _prepare_products(products):
 
 def _supplier_options(products):
     fornecedores = []
-
     if len(products) and "fornecedor" in products.columns:
         fornecedores = sorted(
             products["fornecedor"]
@@ -103,36 +65,13 @@ def _supplier_options(products):
             .unique()
             .tolist()
         )
-
     return ["Todos"] + fornecedores
 
 
 def _filter_by_supplier(products, supplier):
     if supplier and supplier != "Todos":
         return products[products["fornecedor"].astype(str).str.strip() == supplier].reset_index(drop=True)
-
     return products.reset_index(drop=True)
-
-
-def _add_item_to_cart(product, quantity, discount):
-    codigo = str(product.get("codigo", ""))
-    produto = str(product.get("produto", ""))
-    unidade = str(product.get("un", "UN"))
-    price = _safe_float(product.get("preco", 0))
-
-    subtotal = price * quantity
-    total = subtotal - (subtotal * discount / 100)
-
-    st.session_state.carrinho.append({
-        "codigo": codigo,
-        "produto": produto,
-        "un": unidade,
-        "quantidade": quantity,
-        "preco": price,
-        "desconto": discount,
-        "subtotal": subtotal,
-        "total": total,
-    })
 
 
 def _product_options(products):
@@ -164,13 +103,35 @@ def _get_product_from_option(products, selected_text):
     return products.iloc[idx].to_dict()
 
 
-def show_new_order() -> None:
-    layout = _layout_values()
+def _add_item_to_cart(product, quantity, discount):
+    codigo = str(product.get("codigo", ""))
+    produto = str(product.get("produto", ""))
+    unidade = str(product.get("un", "UN"))
+    price = _safe_float(product.get("preco", 0))
 
+    subtotal = price * quantity
+    total = subtotal - (subtotal * discount / 100)
+
+    st.session_state.carrinho.append({
+        "codigo": codigo,
+        "produto": produto,
+        "un": unidade,
+        "quantidade": quantity,
+        "preco": price,
+        "desconto": discount,
+        "subtotal": subtotal,
+        "total": total,
+    })
+
+
+def show_new_order() -> None:
     title("🛒 Novo Pedido")
+
+    blocos = get_screen_layout("Novo Pedido")
 
     products = read_table(PRODUCTS_FILE)
     products = _prepare_products(products)
+
     clients = read_table(CLIENTS_FILE)
 
     if "carrinho" not in st.session_state:
@@ -182,50 +143,61 @@ def show_new_order() -> None:
     if "produto_adicionado" not in st.session_state:
         st.session_state.produto_adicionado = False
 
+    if "novo_pedido_cliente" not in st.session_state:
+        st.session_state.novo_pedido_cliente = ""
+
+    if "novo_pedido_fornecedor_valor" not in st.session_state:
+        st.session_state.novo_pedido_fornecedor_valor = "Todos"
+
+    if "novo_pedido_add_clicked" not in st.session_state:
+        st.session_state.novo_pedido_add_clicked = False
+
     seller = st.session_state.get("vendedor", "")
 
     if len(products) == 0:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
 
-    col_cliente, col_vazio = st.columns(layout["cliente"])
-
-    with col_cliente:
+    def bloco_cliente():
         client_list = (
             clients["cliente"].astype(str).tolist()
             if "cliente" in clients.columns and len(clients)
             else ["CLIENTE PADRÃO"]
         )
-        client = st.selectbox("Cliente", client_list)
 
-    st.markdown("---")
+        st.session_state.novo_pedido_cliente = st.selectbox(
+            "Cliente",
+            client_list,
+            key="novo_pedido_cliente_selectbox"
+        )
 
-    supplier_col, search_col, button_col, empty_col = st.columns(layout["novo_busca"])
-
-    with supplier_col:
-        supplier_filter = st.selectbox(
+    def bloco_fornecedor():
+        st.session_state.novo_pedido_fornecedor_valor = st.selectbox(
             "Fornecedor",
             _supplier_options(products),
             key="novo_pedido_fornecedor",
         )
 
-    filtered_products = _filter_by_supplier(products, supplier_filter)
+    def bloco_produto():
+        fornecedor = st.session_state.get("novo_pedido_fornecedor_valor", "Todos")
+        filtered_products = _filter_by_supplier(products, fornecedor)
 
-    with search_col:
         selected_text = st.selectbox(
             "🔍 Buscar produto por código, nome ou fornecedor",
             _product_options(filtered_products),
-            key=f"novo_pedido_produto_selectbox_{supplier_filter}",
+            key=f"novo_pedido_produto_selectbox_{fornecedor}",
             label_visibility="collapsed",
         )
 
-        product_selected = _get_product_from_option(filtered_products, selected_text)
-        st.session_state.selected_product = product_selected
+        st.session_state.selected_product = _get_product_from_option(filtered_products, selected_text)
 
-    with button_col:
+    def bloco_botao_adicionar():
         st.write("")
         st.write("")
-        add_clicked = st.button("➕ ADICIONAR", use_container_width=True)
+        clicked = st.button("➕ ADICIONAR", use_container_width=True)
+
+        if clicked:
+            st.session_state.novo_pedido_add_clicked = True
 
         if st.session_state.get("produto_adicionado"):
             st.markdown(
@@ -254,13 +226,15 @@ def show_new_order() -> None:
             )
             st.session_state.produto_adicionado = False
 
-    product = st.session_state.get("selected_product")
+    def bloco_produto_selecionado():
+        product = st.session_state.get("selected_product")
 
-    if product:
+        if not product:
+            return
+
         codigo = str(product.get("codigo", ""))
         produto = str(product.get("produto", ""))
         fornecedor = str(product.get("fornecedor", ""))
-        unidade = str(product.get("un", "UN"))
         price = _safe_float(product.get("preco", 0))
 
         st.markdown("### Produto selecionado")
@@ -276,72 +250,68 @@ def show_new_order() -> None:
             unsafe_allow_html=True,
         )
 
-        q1, q2, q3, q4 = st.columns(layout["novo_item"])
+    def bloco_quantidade():
+        st.session_state.novo_pedido_quantidade = st.number_input(
+            "Quantidade",
+            min_value=0,
+            value=0,
+            step=1,
+            key="novo_pedido_quantidade_input"
+        )
 
-        with q1:
-            quantity = st.number_input(
-                "Quantidade",
-                min_value=0,
-                value=0,
-                step=1
-            )
+    def bloco_desconto():
+        st.session_state.novo_pedido_desconto = st.number_input(
+            "% Desconto",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            key="novo_pedido_desconto_input"
+        )
 
-        with q2:
-            discount = st.number_input(
-                "% Desconto",
-                min_value=0.0,
-                value=0.0,
-                step=1.0
-            )
+    def bloco_total_item():
+        product = st.session_state.get("selected_product")
+
+        if not product:
+            st.text_input("Total do item", value=money(0), disabled=True)
+            return
+
+        quantity = st.session_state.get("novo_pedido_quantidade", 0)
+        discount = st.session_state.get("novo_pedido_desconto", 0.0)
+        price = _safe_float(product.get("preco", 0))
 
         subtotal = price * quantity
         total = subtotal - (subtotal * discount / 100)
 
-        with q3:
-            st.text_input(
-                "Total do item",
-                value=money(total),
-                disabled=True
-            )
+        st.text_input(
+            "Total do item",
+            value=money(total),
+            disabled=True,
+            key="novo_pedido_total_item_input"
+        )
 
-        if add_clicked:
-            if quantity <= 0:
-                st.warning("Informe a quantidade antes de adicionar.")
-            else:
-                _add_item_to_cart(product, quantity, discount)
-                st.session_state.selected_product = None
-                st.session_state.produto_adicionado = True
-                time.sleep(0.3)
-                st.rerun()
-    else:
-        if add_clicked:
-            st.warning("Selecione um produto antes de adicionar.")
+    def bloco_carrinho():
+        st.markdown(f"### Carrinho ({len(st.session_state.carrinho)} itens)")
 
-    st.markdown("---")
-    st.markdown(f"### Carrinho ({len(st.session_state.carrinho)} itens)")
+        if len(st.session_state.carrinho):
+            cart = pd.DataFrame(st.session_state.carrinho)
+            st.dataframe(cart, use_container_width=True, height=320)
 
-    if len(st.session_state.carrinho):
-        cart = pd.DataFrame(st.session_state.carrinho)
-        st.dataframe(cart, use_container_width=True, height=320)
+            subtotal_general = cart["subtotal"].sum()
+            total_general = cart["total"].sum()
+            discount_general = subtotal_general - total_general
 
-        subtotal_general = cart["subtotal"].sum()
-        total_general = cart["total"].sum()
-        discount_general = subtotal_general - total_general
+            r1, r2, r3 = st.columns(3)
 
-        r1, r2, r3 = st.columns(3)
+            with r1:
+                metric_card("Subtotal", money(subtotal_general))
+            with r2:
+                metric_card("Desconto", money(discount_general))
+            with r3:
+                metric_card("Total", money(total_general))
+        else:
+            st.info("Nenhum produto adicionado ao pedido.")
 
-        with r1:
-            metric_card("Subtotal", money(subtotal_general))
-        with r2:
-            metric_card("Desconto", money(discount_general))
-        with r3:
-            metric_card("Total", money(total_general))
-    else:
-        st.info("Nenhum produto adicionado ao pedido.")
-
-    f1, f2, f3 = st.columns(layout["novo_botoes"])
-
-    with f1:
+    def bloco_finalizar():
         if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
             if len(st.session_state.carrinho) == 0:
                 st.warning("Adicione pelo menos um produto.")
@@ -350,7 +320,9 @@ def show_new_order() -> None:
                 number = next_order_number()
                 date = now_text()
 
+                client = st.session_state.get("novo_pedido_cliente", "")
                 rows = []
+
                 for item in st.session_state.carrinho:
                     rows.append({
                         "pedido": number,
@@ -377,16 +349,54 @@ def show_new_order() -> None:
                 st.success(f"Pedido nº {number} salvo com sucesso!")
                 st.rerun()
 
-    with f2:
+    def bloco_limpar():
         if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
             st.session_state.carrinho = []
             st.session_state.selected_product = None
             st.rerun()
 
+    componentes = {
+        "Cliente": bloco_cliente,
+        "Fornecedor": bloco_fornecedor,
+        "Produto": bloco_produto,
+        "Botão Adicionar": bloco_botao_adicionar,
+        "Produto Selecionado": bloco_produto_selecionado,
+        "Quantidade": bloco_quantidade,
+        "Desconto": bloco_desconto,
+        "Total do Item": bloco_total_item,
+        "Carrinho": bloco_carrinho,
+        "Finalizar Pedido": bloco_finalizar,
+        "Limpar Pedido": bloco_limpar,
+    }
+
+    linhas = sorted(
+        set(int(float(cfg.get("y", 1))) for cfg in blocos.values())
+    )
+
+    for linha_numero in linhas:
+        renderizar_linha(blocos, componentes, linha_numero)
+        st.markdown("")
+
+    if st.session_state.get("novo_pedido_add_clicked"):
+        product = st.session_state.get("selected_product")
+        quantity = st.session_state.get("novo_pedido_quantidade", 0)
+        discount = st.session_state.get("novo_pedido_desconto", 0.0)
+
+        st.session_state.novo_pedido_add_clicked = False
+
+        if not product:
+            st.warning("Selecione um produto antes de adicionar.")
+        elif quantity <= 0:
+            st.warning("Informe a quantidade antes de adicionar.")
+        else:
+            _add_item_to_cart(product, quantity, discount)
+            st.session_state.selected_product = None
+            st.session_state.produto_adicionado = True
+            time.sleep(0.3)
+            st.rerun()
+
 
 def edit_order() -> None:
-    layout = _layout_values()
-
     st.markdown("---")
     st.markdown("## ✏️ Alterar Pedido")
 
@@ -474,7 +484,7 @@ def edit_order() -> None:
     st.markdown("---")
     st.markdown("### ➕ Adicionar novo produto ao pedido")
 
-    supplier_col, product_col, empty_col = st.columns(layout["alterar_busca"])
+    supplier_col, product_col, empty_col = st.columns([1.2, 2.4, 2.2])
 
     with supplier_col:
         edit_supplier_filter = st.selectbox(
