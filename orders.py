@@ -66,9 +66,10 @@ def show_new_order() -> None:
         st.warning("Nenhum produto cadastrado.")
         st.stop()
 
-    c1, c2 = st.columns(2)
+    # LINHA CLIENTE / VENDEDOR MAIS COMPACTA
+    col_cliente, col_vendedor, col_vazio = st.columns([2, 1.2, 1])
 
-    with c1:
+    with col_cliente:
         client_list = (
             clients["cliente"].astype(str).tolist()
             if "cliente" in clients.columns and len(clients)
@@ -76,12 +77,16 @@ def show_new_order() -> None:
         )
         client = st.selectbox("Cliente", client_list)
 
-    with c2:
-        seller = st.text_input("Vendedor", value=st.session_state.get("vendedor", ""))
+    with col_vendedor:
+        seller = st.text_input(
+            "Vendedor",
+            value=st.session_state.get("vendedor", "")
+        )
 
     st.markdown("---")
 
-    search_col, button_col = st.columns([3, 1])
+    # BUSCA / BOTÃO MAIS COMPACTOS
+    search_col, button_col, empty_col = st.columns([2.4, 1, 1.2])
 
     with search_col:
         search = st.text_input("🔍 Buscar produto por código, nome ou fornecedor")
@@ -160,7 +165,7 @@ def show_new_order() -> None:
 
         st.markdown(
             f"""
-            <div class='card'>
+            <div class='card' style="max-width:720px;">
                 <b>{codigo} - {produto}</b><br>
                 Preço: {money(price)}<br>
                 Fornecedor: {fornecedor}
@@ -169,19 +174,34 @@ def show_new_order() -> None:
             unsafe_allow_html=True,
         )
 
-        q1, q2, q3 = st.columns(3)
+        # CAMPOS DO ITEM MAIS CURTOS
+        q1, q2, q3, q4 = st.columns([1, 1, 1.2, 1.8])
 
         with q1:
-            quantity = st.number_input("Quantidade", min_value=1, value=1, step=1)
+            quantity = st.number_input(
+                "Quantidade",
+                min_value=1,
+                value=1,
+                step=1
+            )
 
         with q2:
-            discount = st.number_input("% Desconto", min_value=0.0, value=0.0, step=1.0)
+            discount = st.number_input(
+                "% Desconto",
+                min_value=0.0,
+                value=0.0,
+                step=1.0
+            )
 
         subtotal = price * quantity
         total = subtotal - (subtotal * discount / 100)
 
         with q3:
-            st.text_input("Total do item", value=money(total), disabled=True)
+            st.text_input(
+                "Total do item",
+                value=money(total),
+                disabled=True
+            )
 
         if add_clicked:
             _add_item_to_cart(product, quantity, discount)
@@ -215,10 +235,10 @@ def show_new_order() -> None:
     else:
         st.info("Nenhum produto adicionado ao pedido.")
 
-    f1, f2 = st.columns(2)
+    f1, f2, f3 = st.columns([1.2, 1.2, 2])
 
     with f1:
-        if st.button("✅ FINALIZAR PEDIDO"):
+        if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
             if len(st.session_state.carrinho) == 0:
                 st.warning("Adicione pelo menos um produto.")
             else:
@@ -254,7 +274,7 @@ def show_new_order() -> None:
                 st.rerun()
 
     with f2:
-        if st.button("🗑️ LIMPAR PEDIDO"):
+        if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
             st.session_state.carrinho = []
             st.session_state.selected_product = None
             st.rerun()
@@ -272,7 +292,11 @@ def edit_order() -> None:
         return
 
     order_list = sorted(orders["pedido"].dropna().unique())
-    selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
+
+    col_pedido, col_vazio = st.columns([1.5, 2.5])
+
+    with col_pedido:
+        selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
 
     order_items = orders[orders["pedido"] == selected_order].copy()
 
@@ -346,7 +370,10 @@ def edit_order() -> None:
     if "edit_selected_product" not in st.session_state:
         st.session_state.edit_selected_product = None
 
-    search = st.text_input("Buscar produto para adicionar", key="edit_order_search")
+    col_busca, col_vazio = st.columns([2.4, 1.6])
+
+    with col_busca:
+        search = st.text_input("Buscar produto para adicionar", key="edit_order_search")
 
     if search.strip():
         if "fornecedor" not in products.columns:
@@ -381,7 +408,7 @@ def edit_order() -> None:
     product = st.session_state.get("edit_selected_product")
 
     if product:
-        c1, c2, c3, c4 = st.columns([4, 1, 1, 1])
+        c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
 
         price = _safe_float(product.get("preco", 0))
 
