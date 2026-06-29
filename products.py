@@ -21,6 +21,13 @@ def _prepare_products(df):
     return df
 
 
+def _safe_float(value):
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
+
 def _safe_filename(value):
     name = str(value).strip()
     name = name.replace("/", "_").replace("\\", "_").replace(" ", "_")
@@ -40,6 +47,35 @@ def _save_uploaded_image(uploaded_file, codigo):
         f.write(uploaded_file.getbuffer())
 
     return path
+
+
+def _product_options(products):
+    options = ["Selecione ou digite o produto"]
+
+    for _, row in products.iterrows():
+        options.append(
+            f"{row.get('codigo', '')} - {row.get('produto', '')} | "
+            f"R$ {_safe_float(row.get('preco', 0)):.2f} | {row.get('fornecedor', '')}"
+        )
+
+    return options
+
+
+def _get_product_from_option(products, selected_text):
+    options = _product_options(products)
+
+    if selected_text == "Selecione ou digite o produto":
+        return None
+
+    if selected_text not in options:
+        return None
+
+    idx = options.index(selected_text) - 1
+
+    if idx < 0:
+        return None
+
+    return products.iloc[idx]
 
 
 def show_products() -> None:
@@ -117,102 +153,91 @@ def show_products() -> None:
         )
 
     st.markdown("---")
-    st.markdown("### 🔍 Consultar produtos")
+    st.markdown("### 🔍 Consultar produto")
 
-    suppliers = sorted(products["fornecedor"].fillna("").astype(str).unique().tolist()) if len(products) else []
-    suppliers = [x for x in suppliers if x.strip()]
-    suppliers = ["Todos"] + suppliers
+    selected_text = st.selectbox(
+        "Buscar produto por código ou nome",
+        _product_options(products),
+        key="consulta_produto_selectbox",
+        label_visibility="collapsed",
+    )
 
-    c1, c2 = st.columns([1.4, 1])
+    produto_selecionado = _get_product_from_option(products, selected_text)
 
-    with c1:
-        search = st.text_input("Buscar por código ou nome")
-
-    with c2:
-        supplier_filter = st.selectbox("Filtrar por fornecedor", suppliers)
-
-    filtered = products.copy()
-
-    if search and len(filtered):
-        filtered = filtered[
-            filtered["produto"].astype(str).str.contains(search, case=False, na=False) |
-            filtered["codigo"].astype(str).str.contains(search, case=False, na=False)
-        ]
-
-    if supplier_filter != "Todos" and len(filtered):
-        filtered = filtered[filtered["fornecedor"].astype(str) == supplier_filter]
-
-    st.dataframe(filtered, use_container_width=True)
-
-    st.markdown("---")
-    st.markdown("### 🖼️ Visualizar / cadastrar imagem do produto")
-
-    if len(filtered) == 0:
-        st.info("Nenhum produto disponível para visualizar.")
+    if produto_selecionado is None:
+        st.info("Digite ou selecione um produto para visualizar.")
         return
 
-    opcoes = []
+    codigo = str(produto_selecionado.get("codigo", "")).strip()
+    produto = str(produto_selecionado.get("produto", "")).strip()
+    un = str(produto_selecionado.get("un", "UN")).strip()
+    preco = _safe_float(produto_selecionado.get("preco", 0))
+    fornecedor = str(produto_selecionado.get("fornecedor", "")).strip()
+    imagem = str(produto_selecionado.get("imagem", "")).strip()
 
-    for _, row in filtered.iterrows():
-        opcoes.append(
-            f"{row.get('codigo', '')} - {row.get('produto', '')}"
+    st.markdown("---")
+    st.markdown("### Produto selecionado")
+
+    col_info, col_img = st.columns([2, 1])
+
+    with col_info:
+        st.markdown(
+            f"""
+            <div class='card'>
+                <b>Código:</b> {codigo}<br>
+                <b>Produto:</b> {produto}<br>
+                <b>Unidade:</b> {un}<br>
+                <b>Preço:</b> R$ {preco:.2f}<br>
+                <b>Fornecedor:</b> {fornecedor}
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-    produto_escolhido = st.selectbox("Selecione um produto", opcoes)
-
-    if produto_escolhido:
-        idx = opcoes.index(produto_escolhido)
-        row = filtered.iloc[idx]
-
-        codigo = str(row.get("codigo", "")).strip()
-        imagem = str(row.get("imagem", "")).strip()
-
-        st.markdown(f"**Produto:** {row.get('produto', '')}")
-        st.markdown(f"**Código:** {codigo}")
-        st.markdown(f"**Fornecedor:** {row.get('fornecedor', '')}")
-
+    with col_img:
         if imagem:
             try:
-                st.image(imagem, caption=str(row.get("produto", "")), width=350)
+                st.image(imagem, caption=produto, width=300)
             except Exception:
                 st.warning("A imagem cadastrada não pôde ser aberta.")
         else:
             st.warning("Esse produto ainda não tem imagem cadastrada.")
 
-        if is_admin():
-            st.markdown("### 📷 Cadastrar / trocar imagem deste produto")
+    if is_admin():
+        st.markdown("---")
+        st.markdown("### 📷 Cadastrar / trocar imagem deste produto")
 
-            nova_imagem_link = st.text_input(
-                "Link da imagem",
-                value=imagem if imagem.startswith("http") else "",
-                key=f"link_img_{codigo}"
-            )
+        nova_imagem_link = st.text_input(
+            "Link da imagem",
+            value=imagem if imagem.startswith("http") else "",
+            key=f"link_img_{codigo}"
+        )
 
-            nova_imagem_upload = st.file_uploader(
-                "Enviar imagem do computador",
-                type=["png", "jpg", "jpeg", "webp"],
-                key=f"upload_img_{codigo}"
-            )
+        nova_imagem_upload = st.file_uploader(
+            "Enviar imagem do computador",
+            type=["png", "jpg", "jpeg", "webp"],
+            key=f"upload_img_{codigo}"
+        )
 
-            if st.button("💾 Salvar imagem do produto"):
-                imagem_final = nova_imagem_link.strip()
+        if st.button("💾 Salvar imagem do produto"):
+            imagem_final = nova_imagem_link.strip()
 
-                if nova_imagem_upload is not None:
-                    imagem_final = _save_uploaded_image(nova_imagem_upload, codigo)
+            if nova_imagem_upload is not None:
+                imagem_final = _save_uploaded_image(nova_imagem_upload, codigo)
 
-                all_products = read_table(PRODUCTS_FILE)
-                all_products = _prepare_products(all_products)
-                all_products["codigo"] = all_products["codigo"].astype(str).str.strip()
+            all_products = read_table(PRODUCTS_FILE)
+            all_products = _prepare_products(all_products)
+            all_products["codigo"] = all_products["codigo"].astype(str).str.strip()
 
-                all_products.loc[
-                    all_products["codigo"] == codigo,
-                    "imagem"
-                ] = imagem_final
+            all_products.loc[
+                all_products["codigo"] == codigo,
+                "imagem"
+            ] = imagem_final
 
-                save_table(all_products, PRODUCTS_FILE)
+            save_table(all_products, PRODUCTS_FILE)
 
-                st.success("Imagem do produto salva com sucesso.")
-                st.rerun()
+            st.success("Imagem do produto salva com sucesso.")
+            st.rerun()
 
 
 def show_import_products() -> None:
