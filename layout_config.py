@@ -9,38 +9,135 @@ LAYOUT_FILE = os.path.join(DATA_DIR, "layout.xlsx")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
+
+# =========================
+# LAYOUT PADRÃO
+# =========================
 DEFAULT_LAYOUT = {
-    "novo_fornecedor_linha": 1,
-    "novo_fornecedor_coluna": 1,
-    "novo_fornecedor_largura": 1.2,
+    # NOVO PEDIDO
+    "novo_pedido_fornecedor_linha": 1,
+    "novo_pedido_fornecedor_coluna": 1,
+    "novo_pedido_fornecedor_largura": 1.2,
 
-    "novo_produto_linha": 1,
-    "novo_produto_coluna": 2,
-    "novo_produto_largura": 2.4,
+    "novo_pedido_produto_linha": 1,
+    "novo_pedido_produto_coluna": 2,
+    "novo_pedido_produto_largura": 2.4,
 
-    "novo_botao_linha": 1,
-    "novo_botao_coluna": 3,
-    "novo_botao_largura": 1.0,
+    "novo_pedido_botao_adicionar_linha": 1,
+    "novo_pedido_botao_adicionar_coluna": 3,
+    "novo_pedido_botao_adicionar_largura": 1.0,
 
-    "novo_espaco_linha": 1,
-    "novo_espaco_coluna": 4,
-    "novo_espaco_largura": 1.2,
+    "novo_pedido_quantidade_linha": 2,
+    "novo_pedido_quantidade_coluna": 1,
+    "novo_pedido_quantidade_largura": 1.0,
 
-    "item_quantidade_linha": 2,
-    "item_quantidade_coluna": 1,
-    "item_quantidade_largura": 1.0,
+    "novo_pedido_desconto_linha": 2,
+    "novo_pedido_desconto_coluna": 2,
+    "novo_pedido_desconto_largura": 1.0,
 
-    "item_desconto_linha": 2,
-    "item_desconto_coluna": 2,
-    "item_desconto_largura": 1.0,
+    "novo_pedido_total_linha": 2,
+    "novo_pedido_total_coluna": 3,
+    "novo_pedido_total_largura": 1.2,
 
-    "item_total_linha": 2,
-    "item_total_coluna": 3,
-    "item_total_largura": 1.2,
+    # PRODUTOS
+    "produtos_busca_linha": 1,
+    "produtos_busca_coluna": 1,
+    "produtos_busca_largura": 2.0,
 
-    "item_espaco_linha": 2,
-    "item_espaco_coluna": 4,
-    "item_espaco_largura": 1.8,
+    "produtos_botao_lupa_linha": 1,
+    "produtos_botao_lupa_coluna": 2,
+    "produtos_botao_lupa_largura": 0.5,
+
+    "produtos_card_linha": 2,
+    "produtos_card_coluna": 1,
+    "produtos_card_largura": 2.0,
+
+    "produtos_imagem_linha": 2,
+    "produtos_imagem_coluna": 2,
+    "produtos_imagem_largura": 1.0,
+
+    # CLIENTES
+    "clientes_busca_linha": 1,
+    "clientes_busca_coluna": 1,
+    "clientes_busca_largura": 2.0,
+
+    "clientes_card_linha": 2,
+    "clientes_card_coluna": 1,
+    "clientes_card_largura": 2.0,
+
+    # PEDIDOS LANÇADOS
+    "pedidos_busca_linha": 1,
+    "pedidos_busca_coluna": 1,
+    "pedidos_busca_largura": 2.0,
+
+    "pedidos_tabela_linha": 2,
+    "pedidos_tabela_coluna": 1,
+    "pedidos_tabela_largura": 3.0,
+
+    # DASHBOARD
+    "dashboard_cards_linha": 1,
+    "dashboard_cards_coluna": 1,
+    "dashboard_cards_largura": 3.0,
+
+    # COMISSÕES
+    "comissoes_busca_linha": 1,
+    "comissoes_busca_coluna": 1,
+    "comissoes_busca_largura": 2.0,
+
+    # FORNECEDORES
+    "fornecedores_busca_linha": 1,
+    "fornecedores_busca_coluna": 1,
+    "fornecedores_busca_largura": 2.0,
+
+    # VENDEDORES
+    "vendedores_busca_linha": 1,
+    "vendedores_busca_coluna": 1,
+    "vendedores_busca_largura": 2.0,
+}
+
+
+ABAS_SISTEMA = {
+    "Novo Pedido": [
+        ("Fornecedor", "novo_pedido_fornecedor"),
+        ("Produto", "novo_pedido_produto"),
+        ("Botão Adicionar", "novo_pedido_botao_adicionar"),
+        ("Quantidade", "novo_pedido_quantidade"),
+        ("Desconto", "novo_pedido_desconto"),
+        ("Total do Item", "novo_pedido_total"),
+    ],
+
+    "Produtos": [
+        ("Busca de Produto", "produtos_busca"),
+        ("Botão Lupa", "produtos_botao_lupa"),
+        ("Card do Produto", "produtos_card"),
+        ("Imagem do Produto", "produtos_imagem"),
+    ],
+
+    "Clientes": [
+        ("Busca de Cliente", "clientes_busca"),
+        ("Card do Cliente", "clientes_card"),
+    ],
+
+    "Pedidos Lançados": [
+        ("Busca de Pedido", "pedidos_busca"),
+        ("Tabela / Lista de Pedidos", "pedidos_tabela"),
+    ],
+
+    "Dashboard": [
+        ("Cards do Dashboard", "dashboard_cards"),
+    ],
+
+    "Comissões": [
+        ("Busca de Comissão", "comissoes_busca"),
+    ],
+
+    "Fornecedores": [
+        ("Busca de Fornecedor", "fornecedores_busca"),
+    ],
+
+    "Vendedores": [
+        ("Busca de Vendedor", "vendedores_busca"),
+    ],
 }
 
 
@@ -79,8 +176,8 @@ def _numero(label, layout, campo, min_value=0.0):
     )
 
 
-def _componente(nome, layout, prefixo):
-    st.markdown(f"### {nome}")
+def _editar_bloco(nome_bloco, layout, prefixo):
+    st.markdown(f"### {nome_bloco}")
 
     c1, c2, c3 = st.columns(3)
 
@@ -93,6 +190,10 @@ def _componente(nome, layout, prefixo):
     with c3:
         _numero("Largura", layout, f"{prefixo}_largura", 0.1)
 
+    st.caption(
+        "Linha = altura do bloco | Coluna = posição lateral | Largura = tamanho do bloco"
+    )
+
     st.markdown("---")
 
 
@@ -104,44 +205,23 @@ def show_layout_config():
     title("⚙️ Designer do Sistema")
 
     st.info(
-        "Aqui você define onde cada campo vai aparecer. "
-        "Linha muda a altura. Coluna muda a posição lateral. "
-        "Largura muda o tamanho do campo."
+        "Escolha a aba do sistema e ajuste os blocos dessa aba. "
+        "Depois clique em Salvar Layout."
     )
 
     layout = load_layout()
 
-    tela = st.selectbox(
-        "Escolha a tela para editar",
-        [
-            "Novo Pedido",
-            "Produtos",
-            "Clientes",
-            "Pedidos Lançados",
-            "Dashboard",
-            "Comissões",
-            "Fornecedores",
-            "Vendedores",
-        ]
+    aba = st.selectbox(
+        "Escolha a aba que deseja editar",
+        list(ABAS_SISTEMA.keys())
     )
 
-    if tela == "Novo Pedido":
-        st.markdown("## 🛒 Novo Pedido")
+    st.markdown(f"## 🧩 Aba: {aba}")
 
-        _componente("Fornecedor", layout, "novo_fornecedor")
-        _componente("Produto", layout, "novo_produto")
-        _componente("Botão Adicionar", layout, "novo_botao")
-        _componente("Espaço vazio", layout, "novo_espaco")
-        _componente("Quantidade", layout, "item_quantidade")
-        _componente("Desconto", layout, "item_desconto")
-        _componente("Total", layout, "item_total")
-        _componente("Espaço vazio do item", layout, "item_espaco")
+    blocos = ABAS_SISTEMA.get(aba, [])
 
-    else:
-        st.warning(
-            "Essa tela ainda não foi ligada ao Designer. "
-            "Primeiro vamos finalizar o Novo Pedido, depois ligamos as outras."
-        )
+    for nome_bloco, prefixo in blocos:
+        _editar_bloco(nome_bloco, layout, prefixo)
 
     col1, col2, col3 = st.columns([1, 1, 3])
 
