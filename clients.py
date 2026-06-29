@@ -28,7 +28,6 @@ def show_clients() -> None:
         col1, col2 = st.columns(2)
 
         with col1:
-            codigo = st.number_input("Código", min_value=1, step=1)
             cnpj = st.text_input("CNPJ")
             cidade = st.text_input("Cidade")
 
@@ -51,8 +50,19 @@ def show_clients() -> None:
             if "vendedor_nome" not in all_clients.columns:
                 all_clients["vendedor_nome"] = ""
 
+            # Gera o próximo código automaticamente
+            if len(all_clients) == 0:
+                novo_codigo = 1
+            else:
+                codigos = pd.to_numeric(
+                    all_clients["codigo"],
+                    errors="coerce"
+                ).fillna(0)
+
+                novo_codigo = int(codigos.max()) + 1
+
             new = pd.DataFrame([{
-                "codigo": codigo,
+                "codigo": novo_codigo,
                 "cliente": nome,
                 "cnpj": cnpj,
                 "telefone": telefone,
@@ -63,11 +73,14 @@ def show_clients() -> None:
             }])
 
             all_clients = pd.concat([all_clients, new], ignore_index=True)
-            all_clients = all_clients.drop_duplicates(subset=["codigo"], keep="last")
+            all_clients = all_clients.drop_duplicates(
+                subset=["codigo"],
+                keep="last"
+            )
 
             save_table(all_clients, CLIENTS_FILE)
 
-            st.success("Cliente salvo.")
+            st.success("Cliente salvo com sucesso!")
             st.rerun()
 
     st.markdown("---")
@@ -77,7 +90,11 @@ def show_clients() -> None:
     if busca and len(clients):
         clients = clients[
             clients.astype(str).apply(
-                lambda row: row.str.contains(busca, case=False, na=False).any(),
+                lambda row: row.str.contains(
+                    busca,
+                    case=False,
+                    na=False
+                ).any(),
                 axis=1
             )
         ]
