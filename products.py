@@ -123,6 +123,9 @@ def show_products() -> None:
     products = read_table(PRODUCTS_FILE)
     products = _prepare_products(products)
 
+    if "produto_busca_aplicada" not in st.session_state:
+        st.session_state.produto_busca_aplicada = False
+
     if is_admin():
         supplier_form_inline("products")
 
@@ -196,7 +199,7 @@ def show_products() -> None:
     st.markdown("---")
     st.markdown("### 🔍 Consultar produto")
 
-    col_busca, col_vazio = st.columns([4, 6])
+    col_busca, col_botao, col_vazio = st.columns([4, 0.7, 5.3])
 
     with col_busca:
         selected_text = st.selectbox(
@@ -205,6 +208,17 @@ def show_products() -> None:
             key="consulta_produto_selectbox",
             label_visibility="collapsed",
         )
+
+    with col_botao:
+        st.write("")
+        buscar = st.button("🔍", use_container_width=True)
+
+    if buscar:
+        st.session_state.produto_busca_aplicada = True
+
+    if not st.session_state.produto_busca_aplicada:
+        st.info("Selecione um produto e clique na lupa para visualizar.")
+        return
 
     produto_selecionado = _get_product_from_option(products, selected_text)
 
