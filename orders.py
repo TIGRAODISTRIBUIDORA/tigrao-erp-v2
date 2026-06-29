@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import streamlit as st
 
@@ -42,10 +43,7 @@ def show_new_order() -> None:
         client = st.selectbox("Cliente", client_list)
 
     with c2:
-        seller = st.text_input(
-            "Vendedor",
-            value=st.session_state.get("vendedor", "")
-        )
+        seller = st.text_input("Vendedor", value=st.session_state.get("vendedor", ""))
 
     search = st.text_input("🔍 Buscar produto por código, nome ou fornecedor")
 
@@ -61,7 +59,7 @@ def show_new_order() -> None:
     st.markdown("### Sugestões de produtos")
 
     for _, row in filtered.head(8).iterrows():
-        col_info, col_qty, col_discount, col_button = st.columns([5, 1.2, 1.4, 1.6])
+        col_info, col_qty, col_discount, col_button = st.columns([5, 1.2, 1.4, 1.8])
 
         codigo = str(row.get("codigo", ""))
         produto = str(row.get("produto", ""))
@@ -107,6 +105,9 @@ def show_new_order() -> None:
         with col_button:
             st.write("")
             st.write("")
+
+            flash_area = st.empty()
+
             if st.button("➕ Adicionar", key=f"add_{safe_key}"):
                 subtotal = preco * quantity
                 total = subtotal - (subtotal * discount / 100)
@@ -122,7 +123,31 @@ def show_new_order() -> None:
                     "total": total,
                 })
 
-                st.success(f"Produto adicionado: {produto}")
+                flash_area.markdown(
+                    """
+                    <div style="
+                        background:#16a34a;
+                        color:white;
+                        padding:12px;
+                        border-radius:10px;
+                        text-align:center;
+                        font-weight:800;
+                        animation: piscar 0.35s alternate 3;
+                    ">
+                        ✅ Adicionado
+                    </div>
+
+                    <style>
+                    @keyframes piscar {
+                        from { opacity: 0.35; }
+                        to { opacity: 1; }
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+                time.sleep(0.8)
                 st.rerun()
 
     st.markdown("---")
