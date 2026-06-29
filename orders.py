@@ -44,6 +44,35 @@ def _add_item_to_cart(product, quantity, discount):
     })
 
 
+def _product_options(products):
+    options = ["Selecione ou digite o produto"]
+
+    for _, row in products.iterrows():
+        options.append(
+            f"{row.get('codigo', '')} - {row.get('produto', '')} | "
+            f"{money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
+        )
+
+    return options
+
+
+def _get_product_from_option(products, selected_text):
+    options = _product_options(products)
+
+    if selected_text == "Selecione ou digite o produto":
+        return None
+
+    if selected_text not in options:
+        return None
+
+    idx = options.index(selected_text) - 1
+
+    if idx < 0:
+        return None
+
+    return products.iloc[idx].to_dict()
+
+
 def show_new_order() -> None:
     title("🛒 Novo Pedido")
 
@@ -83,7 +112,14 @@ def show_new_order() -> None:
     search_col, button_col, empty_col = st.columns([2.4, 1, 1.2])
 
     with search_col:
-        search = st.text_input("🔍 Buscar produto por código, nome ou fornecedor")
+        selected_text = st.selectbox(
+            "🔍 Buscar produto por código, nome ou fornecedor",
+            _product_options(products),
+            key="novo_pedido_produto_selectbox",
+        )
+
+        product_selected = _get_product_from_option(products, selected_text)
+        st.session_state.selected_product = product_selected
 
     with button_col:
         st.write("")
@@ -116,38 +152,6 @@ def show_new_order() -> None:
                 unsafe_allow_html=True,
             )
             st.session_state.produto_adicionado = False
-
-    if search.strip():
-        filtered = products[
-            products["produto"].astype(str).str.contains(search, case=False, na=False)
-            | products["codigo"].astype(str).str.contains(search, case=False, na=False)
-            | products["fornecedor"].astype(str).str.contains(search, case=False, na=False)
-        ].head(8)
-
-        if len(filtered):
-            options = []
-            for _, row in filtered.iterrows():
-                options.append(
-                    f"{row.get('codigo', '')} - {row.get('produto', '')} | "
-                    f"{money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
-                )
-
-            selected_text = st.selectbox(
-                "Sugestões de produtos",
-                ["Selecione um produto"] + options,
-            )
-
-            if selected_text != "Selecione um produto":
-                idx = options.index(selected_text)
-                st.session_state.selected_product = filtered.iloc[idx].to_dict()
-            else:
-                st.session_state.selected_product = None
-        else:
-            st.info("Nenhum produto encontrado.")
-            st.session_state.selected_product = None
-    else:
-        st.info("Digite para buscar produtos.")
-        st.session_state.selected_product = None
 
     product = st.session_state.get("selected_product")
 
@@ -286,6 +290,9 @@ def edit_order() -> None:
     orders = read_table(ORDERS_FILE)
     products = read_table(PRODUCTS_FILE)
 
+    if "fornecedor" not in products.columns:
+        products["fornecedor"] = ""
+
     if len(orders) == 0:
         st.info("Nenhum pedido disponível para alteração.")
         return
@@ -366,48 +373,13 @@ def edit_order() -> None:
     st.markdown("---")
     st.markdown("### ➕ Adicionar novo produto ao pedido")
 
-    if "edit_selected_product" not in st.session_state:
-        st.session_state.edit_selected_product = None
+    selected_text = st.selectbox(
+        "Buscar produto para adicionar",
+        _product_options(products),
+        key="edit_order_product_selectbox",
+    )
 
-    col_busca, col_vazio = st.columns([2.4, 1.6])
-
-    with col_busca:
-        search = st.text_input("Buscar produto para adicionar", key="edit_order_search")
-
-    if search.strip():
-        if "fornecedor" not in products.columns:
-            products["fornecedor"] = ""
-
-        filtered = products[
-            products["produto"].astype(str).str.contains(search, case=False, na=False)
-            | products["codigo"].astype(str).str.contains(search, case=False, na=False)
-            | products["fornecedor"].astype(str).str.contains(search, case=False, na=False)
-        ].head(8)
-
-        if len(filtered):
-            options = []
-            for _, product in filtered.iterrows():
-                options.append(
-                    f"{product.get('codigo', '')} - {product.get('produto', '')} | "
-                    f"{money(_safe_float(product.get('preco', 0)))}"
-                )
-
-            selected_text = st.selectbox(
-                "Sugestões",
-                ["Selecione um produto"] + options,
-                key="edit_order_product_selectbox",
-            )
-
-            if selected_text != "Selecione um produto":
-                idx = options.index(selected_text)
-                st.session_state.edit_selected_product = filtered.iloc[idx].to_dict()
-            else:
-                st.session_state.edit_selected_product = None
-        else:
-            st.info("Nenhum produto encontrado.")
-            st.session_state.edit_selected_product = None
-
-    product = st.session_state.get("edit_selected_product")
+    product = _get_product_from_option(products, selected_text)
 
     if product:
         c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
@@ -462,7 +434,6 @@ def edit_order() -> None:
             }
 
             updated_rows.append(new_item)
-            st.session_state.edit_selected_product = None
             st.success("Produto adicionado na alteração. Clique em Salvar Alterações.")
             time.sleep(0.5)
 
