@@ -13,14 +13,15 @@ from database import (
     save_table,
     to_excel_bytes,
 )
-from visual_designer import get_visual_layout
 from ui import is_admin, metric_card, title
+
 
 def _safe_float(value):
     try:
         return float(value)
     except Exception:
         return 0.0
+
 
 def _prepare_products(products):
     if "codigo" not in products.columns:
@@ -48,6 +49,7 @@ def _prepare_products(products):
 
     return products.reset_index(drop=True)
 
+
 def _supplier_options(products):
     fornecedores = []
 
@@ -65,6 +67,7 @@ def _supplier_options(products):
 
     return ["Todos"] + fornecedores
 
+
 def _filter_by_supplier(products, supplier):
     if supplier and supplier != "Todos":
         return products[
@@ -72,6 +75,7 @@ def _filter_by_supplier(products, supplier):
         ].reset_index(drop=True)
 
     return products.reset_index(drop=True)
+
 
 def _product_options(products):
     options = ["Selecione ou digite o produto"]
@@ -83,6 +87,7 @@ def _product_options(products):
         )
 
     return options
+
 
 def _get_product_from_option(products, selected_text):
     options = _product_options(products)
@@ -99,6 +104,7 @@ def _get_product_from_option(products, selected_text):
         return None
 
     return products.iloc[idx].to_dict()
+
 
 def _add_item_to_cart(product, quantity, discount):
     codigo = str(product.get("codigo", ""))
@@ -120,78 +126,166 @@ def _add_item_to_cart(product, quantity, discount):
         "total": total,
     })
 
-def _renderizar_visual(blocos, componentes):
-    blocos_ordenados = sorted(
-        blocos.items(),
-        key=lambda item: (
-            float(item[1].get("y", 0)),
-            float(item[1].get("x", 0))
-        )
-    )
 
-    linhas = {}
+def _mobile_css_orders():
+    st.markdown("""
+    <style>
+    .novo-pedido-titulo-antigo {
+        display: none !important;
+    }
 
-    for nome, cfg in blocos_ordenados:
-        y = int(float(cfg.get("y", 0)) / 90)
-        linhas.setdefault(y, []).append((nome, cfg))
+    .pedido-section {
+        background: #ffffff;
+        border-radius: 22px;
+        padding: 16px;
+        margin: 10px 10px 14px 10px;
+        box-shadow: 0 6px 18px rgba(15,23,42,.10);
+        border: 1px solid #e5e7eb;
+    }
 
-    for _, itens in sorted(linhas.items()):
-        itens = sorted(itens, key=lambda item: float(item[1].get("x", 0)))
+    .pedido-section-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: #111827;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-        colunas = []
-        pos_atual = 0
+    .produto-selecionado-card {
+        background: linear-gradient(135deg, #fff7ed, #ffffff);
+        border: 2px solid #fed7aa;
+        border-radius: 18px;
+        padding: 14px;
+        margin-top: 12px;
+        margin-bottom: 12px;
+    }
 
-        for nome, cfg in itens:
-            x = float(cfg.get("x", 0))
-            w = float(cfg.get("w", 120))
+    .produto-nome {
+        font-size: 16px;
+        font-weight: 900;
+        color: #0f172a;
+        margin-bottom: 6px;
+    }
 
-            espaco = max(0.1, (x - pos_atual) / 100)
-            largura = max(0.5, w / 100)
+    .produto-info {
+        font-size: 13px;
+        color: #475569;
+        font-weight: 700;
+        line-height: 1.5;
+    }
 
-            if espaco > 0.1:
-                colunas.append(espaco)
+    .total-box {
+        background: #0b8de3;
+        color: white !important;
+        border-radius: 18px;
+        padding: 16px;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 6px 16px rgba(11,141,227,.25);
+    }
 
-            colunas.append(largura)
-            pos_atual = x + w
+    .total-box * {
+        color: white !important;
+    }
 
-        colunas.append(1)
+    .total-label {
+        font-size: 12px;
+        opacity: .9;
+        font-weight: 800;
+    }
 
-        cols = st.columns(colunas)
+    .total-valor {
+        font-size: 24px;
+        font-weight: 1000;
+        margin-top: 4px;
+    }
 
-        idx_col = 0
-        pos_atual = 0
+    .cart-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 14px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 14px rgba(15,23,42,.08);
+    }
 
-        for nome, cfg in itens:
-            x = float(cfg.get("x", 0))
-            w = float(cfg.get("w", 120))
+    .cart-title {
+        color: #0b8de3;
+        font-size: 15px;
+        font-weight: 1000;
+        margin-bottom: 6px;
+    }
 
-            espaco = max(0.1, (x - pos_atual) / 100)
+    .cart-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+        font-size: 12px;
+    }
 
-            if espaco > 0.1:
-                idx_col += 1
+    .cart-mini {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 8px;
+        border: 1px solid #e5e7eb;
+    }
 
-            with cols[idx_col]:
-                if nome in componentes:
-                    componentes[nome]()
+    .cart-mini b {
+        display: block;
+        font-size: 13px;
+        color: #111827;
+        margin-top: 2px;
+    }
 
-            idx_col += 1
-            pos_atual = x + w
+    .resumo-pedido {
+        background: #111827;
+        color: white !important;
+        border-radius: 20px;
+        padding: 16px;
+        margin: 10px;
+    }
 
-        st.markdown("")
+    .resumo-pedido * {
+        color: white !important;
+    }
+
+    .resumo-linha {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .resumo-total {
+        border-top: 1px solid rgba(255,255,255,.25);
+        padding-top: 10px;
+        margin-top: 10px;
+        font-size: 20px;
+        font-weight: 1000;
+    }
+
+    div[data-testid="column"] {
+        width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+    }
+
+    div.stButton > button {
+        white-space: normal !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 
 def show_new_order() -> None:
-    title("🛒 Novo Pedido")
-
-    blocos_lista = get_visual_layout("Novo Pedido")
-    blocos = {
-        b["label"]: b
-        for b in blocos_lista
-        if b.get("show", True)
-    }
+    _mobile_css_orders()
 
     products = read_table(PRODUCTS_FILE)
     products = _prepare_products(products)
-
     clients = read_table(CLIENTS_FILE)
 
     if "carrinho" not in st.session_state:
@@ -200,264 +294,191 @@ def show_new_order() -> None:
     if "selected_product" not in st.session_state:
         st.session_state.selected_product = None
 
-    if "produto_adicionado" not in st.session_state:
-        st.session_state.produto_adicionado = False
-
-    if "novo_pedido_cliente" not in st.session_state:
-        st.session_state.novo_pedido_cliente = ""
-
-    if "novo_pedido_fornecedor_valor" not in st.session_state:
-        st.session_state.novo_pedido_fornecedor_valor = "Todos"
-
-    if "novo_pedido_add_clicked" not in st.session_state:
-        st.session_state.novo_pedido_add_clicked = False
-
     seller = st.session_state.get("vendedor", "")
 
     if len(products) == 0:
         st.warning("Nenhum produto cadastrado.")
-        st.stop()
+        return
 
-    def bloco_cliente():
-        client_list = (
-            clients["cliente"].astype(str).tolist()
-            if "cliente" in clients.columns and len(clients)
-            else ["CLIENTE PADRÃO"]
-        )
+    st.markdown("""
+    <div class="pedido-section">
+        <div class="pedido-section-title">🛒 Novo Pedido</div>
+    """, unsafe_allow_html=True)
 
-        st.session_state.novo_pedido_cliente = st.selectbox(
-            "Cliente",
-            client_list,
-            key="novo_pedido_cliente_selectbox"
-        )
+    client_list = (
+        clients["cliente"].astype(str).tolist()
+        if "cliente" in clients.columns and len(clients)
+        else ["CLIENTE PADRÃO"]
+    )
 
-    def bloco_fornecedor():
-        st.session_state.novo_pedido_fornecedor_valor = st.selectbox(
-            "Fornecedor",
-            _supplier_options(products),
-            key="novo_pedido_fornecedor",
-        )
+    client = st.selectbox(
+        "Cliente",
+        client_list,
+        key="novo_pedido_cliente_selectbox_mobile"
+    )
 
-    def bloco_produto():
-        fornecedor = st.session_state.get("novo_pedido_fornecedor_valor", "Todos")
-        filtered_products = _filter_by_supplier(products, fornecedor)
+    supplier = st.selectbox(
+        "Fornecedor",
+        _supplier_options(products),
+        key="novo_pedido_fornecedor_mobile"
+    )
 
-        selected_text = st.selectbox(
-            "🔍 Buscar produto por código, nome ou fornecedor",
-            _product_options(filtered_products),
-            key=f"novo_pedido_produto_selectbox_{fornecedor}",
-            label_visibility="collapsed",
-        )
+    filtered_products = _filter_by_supplier(products, supplier)
 
-        st.session_state.selected_product = _get_product_from_option(
-            filtered_products,
-            selected_text
-        )
+    selected_text = st.selectbox(
+        "Produto",
+        _product_options(filtered_products),
+        key=f"novo_pedido_produto_mobile_{supplier}",
+    )
 
-    def bloco_botao_adicionar():
-        st.write("")
-        st.write("")
+    product = _get_product_from_option(filtered_products, selected_text)
+    st.session_state.selected_product = product
 
-        clicked = st.button("➕ ADICIONAR", use_container_width=True)
-
-        if clicked:
-            st.session_state.novo_pedido_add_clicked = True
-
-        if st.session_state.get("produto_adicionado"):
-            st.markdown(
-                """
-                <div style="
-                    background:#16a34a;
-                    color:white;
-                    padding:10px;
-                    border-radius:8px;
-                    text-align:center;
-                    font-weight:800;
-                    animation: blink 0.35s alternate 3;
-                    margin-top:8px;
-                ">
-                    ✅ Produto adicionado
-                </div>
-
-                <style>
-                @keyframes blink {
-                    from { opacity: 0.35; }
-                    to { opacity: 1; }
-                }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
-            st.session_state.produto_adicionado = False
-
-    def bloco_produto_selecionado():
-        product = st.session_state.get("selected_product")
-
-        if not product:
-            return
-
+    if product:
         codigo = str(product.get("codigo", ""))
         produto = str(product.get("produto", ""))
         fornecedor = str(product.get("fornecedor", ""))
         price = _safe_float(product.get("preco", 0))
 
-        st.markdown("### Produto selecionado")
-
-        st.markdown(
-            f"""
-            <div class='card' style="max-width:720px;">
-                <b>{codigo} - {produto}</b><br>
-                Preço: {money(price)}<br>
-                Fornecedor: {fornecedor}
+        st.markdown(f"""
+        <div class="produto-selecionado-card">
+            <div class="produto-nome">{produto}</div>
+            <div class="produto-info">
+                Código: {codigo}<br>
+                Fornecedor: {fornecedor}<br>
+                Preço: <b>{money(price)}</b>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        </div>
+        """, unsafe_allow_html=True)
 
-    def bloco_quantidade():
-        st.session_state.novo_pedido_quantidade = st.number_input(
-            "Quantidade",
-            min_value=0,
-            value=0,
-            step=1,
-            key="novo_pedido_quantidade_input"
-        )
+    quantity = st.number_input(
+        "Quantidade",
+        min_value=0,
+        value=0,
+        step=1,
+        key="novo_pedido_quantidade_mobile"
+    )
 
-    def bloco_desconto():
-        st.session_state.novo_pedido_desconto = st.number_input(
-            "% Desconto",
-            min_value=0.0,
-            value=0.0,
-            step=1.0,
-            key="novo_pedido_desconto_input"
-        )
+    discount = st.number_input(
+        "% Desconto",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        key="novo_pedido_desconto_mobile"
+    )
 
-    def bloco_total_item():
-        product = st.session_state.get("selected_product")
+    price = _safe_float(product.get("preco", 0)) if product else 0
+    subtotal_item = price * quantity
+    total_item = subtotal_item - (subtotal_item * discount / 100)
 
-        if not product:
-            st.text_input(
-                "Total do item",
-                value=money(0),
-                disabled=True,
-                key="novo_pedido_total_item_vazio"
-            )
-            return
+    st.markdown(f"""
+        <div class="total-box">
+            <div class="total-label">TOTAL DO ITEM</div>
+            <div class="total-valor">{money(total_item)}</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-        quantity = st.session_state.get("novo_pedido_quantidade", 0)
-        discount = st.session_state.get("novo_pedido_desconto", 0.0)
-        price = _safe_float(product.get("preco", 0))
-
-        subtotal = price * quantity
-        total = subtotal - (subtotal * discount / 100)
-
-        st.text_input(
-            "Total do item",
-            value=money(total),
-            disabled=True,
-            key="novo_pedido_total_item_input"
-        )
-
-    def bloco_carrinho():
-        st.markdown(f"### Carrinho ({len(st.session_state.carrinho)} itens)")
-
-        if len(st.session_state.carrinho):
-            cart = pd.DataFrame(st.session_state.carrinho)
-            st.dataframe(cart, use_container_width=True, height=320)
-
-            subtotal_general = cart["subtotal"].sum()
-            total_general = cart["total"].sum()
-            discount_general = subtotal_general - total_general
-
-            r1, r2, r3 = st.columns(3)
-
-            with r1:
-                metric_card("Subtotal", money(subtotal_general))
-            with r2:
-                metric_card("Desconto", money(discount_general))
-            with r3:
-                metric_card("Total", money(total_general))
-        else:
-            st.info("Nenhum produto adicionado ao pedido.")
-
-    def bloco_finalizar():
-        if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
-            if len(st.session_state.carrinho) == 0:
-                st.warning("Adicione pelo menos um produto.")
-            else:
-                orders = read_table(ORDERS_FILE)
-                number = next_order_number()
-                date = now_text()
-
-                client = st.session_state.get("novo_pedido_cliente", "")
-
-                rows = []
-
-                for item in st.session_state.carrinho:
-                    rows.append({
-                        "pedido": number,
-                        "data": date,
-                        "vendedor": seller,
-                        "cliente": client,
-                        "codigo": item["codigo"],
-                        "produto": item["produto"],
-                        "un": item["un"],
-                        "quantidade": item["quantidade"],
-                        "preco": item["preco"],
-                        "desconto": item["desconto"],
-                        "subtotal": item["subtotal"],
-                        "total": item["total"],
-                        "status": "PENDENTE",
-                    })
-
-                orders = pd.concat([orders, pd.DataFrame(rows)], ignore_index=True)
-                save_table(orders, ORDERS_FILE)
-
-                st.session_state.carrinho = []
-                st.session_state.selected_product = None
-
-                st.success(f"Pedido nº {number} salvo com sucesso!")
-                st.rerun()
-
-    def bloco_limpar():
-        if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
-            st.session_state.carrinho = []
-            st.session_state.selected_product = None
-            st.rerun()
-
-    componentes = {
-        "Cliente": bloco_cliente,
-        "Fornecedor": bloco_fornecedor,
-        "Produto": bloco_produto,
-        "Botão Adicionar": bloco_botao_adicionar,
-        "Produto Selecionado": bloco_produto_selecionado,
-        "Quantidade": bloco_quantidade,
-        "Desconto": bloco_desconto,
-        "Total do Item": bloco_total_item,
-        "Carrinho": bloco_carrinho,
-        "Finalizar Pedido": bloco_finalizar,
-        "Limpar Pedido": bloco_limpar,
-    }
-
-    _renderizar_visual(blocos, componentes)
-
-    if st.session_state.get("novo_pedido_add_clicked"):
-        product = st.session_state.get("selected_product")
-        quantity = st.session_state.get("novo_pedido_quantidade", 0)
-        discount = st.session_state.get("novo_pedido_desconto", 0.0)
-
-        st.session_state.novo_pedido_add_clicked = False
-
+    if st.button("➕ ADICIONAR PRODUTO AO PEDIDO", use_container_width=True):
         if not product:
             st.warning("Selecione um produto antes de adicionar.")
         elif quantity <= 0:
             st.warning("Informe a quantidade antes de adicionar.")
         else:
             _add_item_to_cart(product, quantity, discount)
-            st.session_state.selected_product = None
-            st.session_state.produto_adicionado = True
+            st.success("Produto adicionado ao carrinho.")
             time.sleep(0.3)
             st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="pedido-section">
+        <div class="pedido-section-title">📦 Carrinho</div>
+    """, unsafe_allow_html=True)
+
+    if len(st.session_state.carrinho) == 0:
+        st.info("Nenhum produto adicionado ao pedido.")
+        subtotal_general = 0
+        total_general = 0
+        discount_general = 0
+    else:
+        cart = pd.DataFrame(st.session_state.carrinho)
+
+        subtotal_general = cart["subtotal"].sum()
+        total_general = cart["total"].sum()
+        discount_general = subtotal_general - total_general
+
+        for i, item in enumerate(st.session_state.carrinho):
+            st.markdown(f"""
+            <div class="cart-card">
+                <div class="cart-title">{item["produto"]}</div>
+                <div class="produto-info">Código: {item["codigo"]} | Unidade: {item["un"]}</div>
+
+                <div class="cart-row">
+                    <div class="cart-mini">Qtd<b>{item["quantidade"]}</b></div>
+                    <div class="cart-mini">Preço<b>{money(item["preco"])}</b></div>
+                    <div class="cart-mini">Desconto<b>{item["desconto"]:.2f}%</b></div>
+                    <div class="cart-mini">Total<b>{money(item["total"])}</b></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if st.button(f"🗑️ Remover item {i + 1}", key=f"remover_item_{i}", use_container_width=True):
+                st.session_state.carrinho.pop(i)
+                st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div class="resumo-pedido">
+        <div class="resumo-linha"><span>Subtotal</span><span>{money(subtotal_general)}</span></div>
+        <div class="resumo-linha"><span>Desconto</span><span>{money(discount_general)}</span></div>
+        <div class="resumo-linha resumo-total"><span>Total</span><span>{money(total_general)}</span></div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
+        if len(st.session_state.carrinho) == 0:
+            st.warning("Adicione pelo menos um produto.")
+        else:
+            orders = read_table(ORDERS_FILE)
+            number = next_order_number()
+            date = now_text()
+
+            rows = []
+
+            for item in st.session_state.carrinho:
+                rows.append({
+                    "pedido": number,
+                    "data": date,
+                    "vendedor": seller,
+                    "cliente": client,
+                    "codigo": item["codigo"],
+                    "produto": item["produto"],
+                    "un": item["un"],
+                    "quantidade": item["quantidade"],
+                    "preco": item["preco"],
+                    "desconto": item["desconto"],
+                    "subtotal": item["subtotal"],
+                    "total": item["total"],
+                    "status": "PENDENTE",
+                })
+
+            orders = pd.concat([orders, pd.DataFrame(rows)], ignore_index=True)
+            save_table(orders, ORDERS_FILE)
+
+            st.session_state.carrinho = []
+            st.session_state.selected_product = None
+
+            st.success(f"Pedido nº {number} salvo com sucesso!")
+            time.sleep(0.8)
+            st.rerun()
+
+    if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
+        st.session_state.carrinho = []
+        st.session_state.selected_product = None
+        st.rerun()
+
 
 def edit_order() -> None:
     st.markdown("---")
@@ -473,10 +494,7 @@ def edit_order() -> None:
 
     order_list = sorted(orders["pedido"].dropna().unique())
 
-    col_pedido, col_vazio = st.columns([1.5, 2.5])
-
-    with col_pedido:
-        selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
+    selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
 
     order_items = orders[orders["pedido"] == selected_order].copy()
 
@@ -501,40 +519,32 @@ def edit_order() -> None:
 
     for idx, row in order_items.iterrows():
         st.markdown("---")
-        c1, c2, c3, c4, c5 = st.columns([4, 1, 1, 1, 1])
+        st.markdown(f"**{row['codigo']} - {row['produto']}**")
+        st.caption(f"Preço unitário: {money(_safe_float(row['preco']))}")
 
-        with c1:
-            st.markdown(f"**{row['codigo']} - {row['produto']}**")
-            st.caption(f"Preço unitário: {money(_safe_float(row['preco']))}")
+        new_qty = st.number_input(
+            "Qtd",
+            min_value=0,
+            value=int(row["quantidade"]),
+            step=1,
+            key=f"edit_qty_{selected_order}_{idx}",
+        )
 
-        with c2:
-            new_qty = st.number_input(
-                "Qtd",
-                min_value=0,
-                value=int(row["quantidade"]),
-                step=1,
-                key=f"edit_qty_{selected_order}_{idx}",
-            )
-
-        with c3:
-            new_discount = st.number_input(
-                "% Desc.",
-                min_value=0.0,
-                value=_safe_float(row["desconto"]),
-                step=1.0,
-                key=f"edit_desc_{selected_order}_{idx}",
-            )
+        new_discount = st.number_input(
+            "% Desc.",
+            min_value=0.0,
+            value=_safe_float(row["desconto"]),
+            step=1.0,
+            key=f"edit_desc_{selected_order}_{idx}",
+        )
 
         price = _safe_float(row["preco"])
         subtotal = price * new_qty
         total = subtotal - (subtotal * new_discount / 100)
 
-        with c4:
-            st.write("Total")
-            st.write(money(total))
+        st.write(f"Total: **{money(total)}**")
 
-        with c5:
-            remove = st.checkbox("Excluir", key=f"remove_{selected_order}_{idx}")
+        remove = st.checkbox("Excluir este item", key=f"remove_{selected_order}_{idx}")
 
         if not remove and new_qty > 0:
             new_row = row.to_dict()
@@ -547,60 +557,48 @@ def edit_order() -> None:
     st.markdown("---")
     st.markdown("### ➕ Adicionar novo produto ao pedido")
 
-    supplier_col, product_col, empty_col = st.columns([1.2, 2.4, 2.2])
-
-    with supplier_col:
-        edit_supplier_filter = st.selectbox(
-            "Fornecedor",
-            _supplier_options(products),
-            key="edit_order_fornecedor",
-        )
+    edit_supplier_filter = st.selectbox(
+        "Fornecedor",
+        _supplier_options(products),
+        key="edit_order_fornecedor",
+    )
 
     edit_filtered_products = _filter_by_supplier(products, edit_supplier_filter)
 
-    with product_col:
-        selected_text = st.selectbox(
-            "Buscar produto para adicionar",
-            _product_options(edit_filtered_products),
-            key=f"edit_order_product_selectbox_{edit_supplier_filter}",
-            label_visibility="collapsed",
-        )
+    selected_text = st.selectbox(
+        "Buscar produto para adicionar",
+        _product_options(edit_filtered_products),
+        key=f"edit_order_product_selectbox_{edit_supplier_filter}",
+    )
 
     product = _get_product_from_option(edit_filtered_products, selected_text)
 
     if product:
-        c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
-
         price = _safe_float(product.get("preco", 0))
 
-        with c1:
-            st.markdown(f"**{product.get('codigo', '')} - {product.get('produto', '')}**")
-            st.caption(f"Preço: {money(price)}")
+        st.markdown(f"**{product.get('codigo', '')} - {product.get('produto', '')}**")
+        st.caption(f"Preço: {money(price)}")
 
-        with c2:
-            add_qty = st.number_input(
-                "Qtd.",
-                min_value=1,
-                value=1,
-                step=1,
-                key="edit_add_qty",
-            )
+        add_qty = st.number_input(
+            "Qtd.",
+            min_value=1,
+            value=1,
+            step=1,
+            key="edit_add_qty",
+        )
 
-        with c3:
-            add_discount = st.number_input(
-                "% Desc.",
-                min_value=0.0,
-                value=0.0,
-                step=1.0,
-                key="edit_add_discount",
-            )
+        add_discount = st.number_input(
+            "% Desc.",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            key="edit_add_discount",
+        )
 
         subtotal = price * add_qty
         total = subtotal - (subtotal * add_discount / 100)
 
-        with c4:
-            st.write("Total")
-            st.write(money(total))
+        st.write(f"Total: **{money(total)}**")
 
         if st.button("➕ Adicionar produto ao pedido"):
             base = order_items.iloc[0].to_dict()
@@ -653,6 +651,7 @@ def edit_order() -> None:
         st.success(f"Pedido nº {selected_order} atualizado com sucesso!")
         time.sleep(0.8)
         st.rerun()
+
 
 def show_orders() -> None:
     title("📋 Pedidos Lançados")
