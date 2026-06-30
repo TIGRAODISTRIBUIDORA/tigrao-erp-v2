@@ -130,133 +130,124 @@ def _add_item_to_cart(product, quantity, discount):
 def _mobile_css_orders():
     st.markdown("""
     <style>
-    .novo-pedido-titulo-antigo {
-        display: none !important;
-    }
-
-    .pedido-section {
+    .pedido-box {
         background: #ffffff;
         border-radius: 22px;
         padding: 16px;
-        margin: 10px 10px 14px 10px;
+        margin: 10px 10px 16px 10px;
         box-shadow: 0 6px 18px rgba(15,23,42,.10);
         border: 1px solid #e5e7eb;
     }
 
-    .pedido-section-title {
-        font-size: 20px;
-        font-weight: 900;
-        color: #111827;
+    .pedido-titulo {
+        font-size: 22px;
+        font-weight: 1000;
+        color: #111827 !important;
         margin-bottom: 14px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
     }
 
-    .produto-selecionado-card {
-        background: linear-gradient(135deg, #fff7ed, #ffffff);
+    .produto-card {
+        background: #fff7ed;
         border: 2px solid #fed7aa;
         border-radius: 18px;
         padding: 14px;
-        margin-top: 12px;
-        margin-bottom: 12px;
+        margin: 12px 0;
     }
 
     .produto-nome {
         font-size: 16px;
-        font-weight: 900;
-        color: #0f172a;
+        font-weight: 1000;
+        color: #111827 !important;
         margin-bottom: 6px;
     }
 
     .produto-info {
         font-size: 13px;
-        color: #475569;
-        font-weight: 700;
+        color: #475569 !important;
+        font-weight: 800;
         line-height: 1.5;
     }
 
     .total-box {
         background: #0b8de3;
-        color: white !important;
         border-radius: 18px;
         padding: 16px;
         text-align: center;
-        margin-top: 10px;
-        margin-bottom: 10px;
+        margin: 14px 0;
         box-shadow: 0 6px 16px rgba(11,141,227,.25);
     }
 
-    .total-box * {
+    .total-box div {
         color: white !important;
     }
 
     .total-label {
         font-size: 12px;
+        font-weight: 900;
         opacity: .9;
-        font-weight: 800;
     }
 
     .total-valor {
-        font-size: 24px;
+        font-size: 28px;
         font-weight: 1000;
         margin-top: 4px;
     }
 
     .cart-card {
-        background: white;
+        background: #ffffff;
         border: 1px solid #e5e7eb;
         border-radius: 18px;
         padding: 14px;
-        margin-bottom: 12px;
+        margin: 12px 10px;
         box-shadow: 0 4px 14px rgba(15,23,42,.08);
     }
 
     .cart-title {
-        color: #0b8de3;
-        font-size: 15px;
+        color: #0b8de3 !important;
+        font-size: 16px;
         font-weight: 1000;
         margin-bottom: 6px;
     }
 
-    .cart-row {
+    .cart-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
-        margin-top: 8px;
-        font-size: 12px;
+        margin-top: 10px;
     }
 
     .cart-mini {
         background: #f8fafc;
         border-radius: 12px;
-        padding: 8px;
+        padding: 9px;
         border: 1px solid #e5e7eb;
+        font-size: 12px;
+        font-weight: 800;
+        color: #475569 !important;
     }
 
     .cart-mini b {
         display: block;
-        font-size: 13px;
-        color: #111827;
-        margin-top: 2px;
+        font-size: 14px;
+        color: #111827 !important;
+        margin-top: 3px;
     }
 
     .resumo-pedido {
         background: #111827;
-        color: white !important;
         border-radius: 20px;
         padding: 16px;
         margin: 10px;
     }
 
-    .resumo-pedido * {
+    .resumo-pedido span {
         color: white !important;
     }
 
     .resumo-linha {
         display: flex;
         justify-content: space-between;
-        font-weight: 800;
+        font-weight: 900;
         margin-bottom: 8px;
     }
 
@@ -265,13 +256,6 @@ def _mobile_css_orders():
         padding-top: 10px;
         margin-top: 10px;
         font-size: 20px;
-        font-weight: 1000;
-    }
-
-    div[data-testid="column"] {
-        width: 100% !important;
-        flex: 1 1 100% !important;
-        min-width: 100% !important;
     }
 
     div.stButton > button {
@@ -291,19 +275,14 @@ def show_new_order() -> None:
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = []
 
-    if "selected_product" not in st.session_state:
-        st.session_state.selected_product = None
-
     seller = st.session_state.get("vendedor", "")
 
     if len(products) == 0:
         st.warning("Nenhum produto cadastrado.")
         return
 
-    st.markdown("""
-    <div class="pedido-section">
-        <div class="pedido-section-title">🛒 Novo Pedido</div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="pedido-box">', unsafe_allow_html=True)
+    st.markdown('<div class="pedido-titulo">🛒 Novo Pedido</div>', unsafe_allow_html=True)
 
     client_list = (
         clients["cliente"].astype(str).tolist()
@@ -311,11 +290,7 @@ def show_new_order() -> None:
         else ["CLIENTE PADRÃO"]
     )
 
-    client = st.selectbox(
-        "Cliente",
-        client_list,
-        key="novo_pedido_cliente_selectbox_mobile"
-    )
+    client = st.selectbox("Cliente", client_list, key="novo_pedido_cliente_mobile")
 
     supplier = st.selectbox(
         "Fornecedor",
@@ -332,7 +307,6 @@ def show_new_order() -> None:
     )
 
     product = _get_product_from_option(filtered_products, selected_text)
-    st.session_state.selected_product = product
 
     if product:
         codigo = str(product.get("codigo", ""))
@@ -341,7 +315,7 @@ def show_new_order() -> None:
         price = _safe_float(product.get("preco", 0))
 
         st.markdown(f"""
-        <div class="produto-selecionado-card">
+        <div class="produto-card">
             <div class="produto-nome">{produto}</div>
             <div class="produto-info">
                 Código: {codigo}<br>
@@ -372,10 +346,10 @@ def show_new_order() -> None:
     total_item = subtotal_item - (subtotal_item * discount / 100)
 
     st.markdown(f"""
-        <div class="total-box">
-            <div class="total-label">TOTAL DO ITEM</div>
-            <div class="total-valor">{money(total_item)}</div>
-        </div>
+    <div class="total-box">
+        <div class="total-label">TOTAL DO ITEM</div>
+        <div class="total-valor">{money(total_item)}</div>
+    </div>
     """, unsafe_allow_html=True)
 
     if st.button("➕ ADICIONAR PRODUTO AO PEDIDO", use_container_width=True):
@@ -391,10 +365,9 @@ def show_new_order() -> None:
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="pedido-section">
-        <div class="pedido-section-title">📦 Carrinho</div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="pedido-box">', unsafe_allow_html=True)
+    st.markdown('<div class="pedido-titulo">📦 Carrinho</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if len(st.session_state.carrinho) == 0:
         st.info("Nenhum produto adicionado ao pedido.")
@@ -409,25 +382,30 @@ def show_new_order() -> None:
         discount_general = subtotal_general - total_general
 
         for i, item in enumerate(st.session_state.carrinho):
-            st.markdown(f"""
-            <div class="cart-card">
-                <div class="cart-title">{item["produto"]}</div>
-                <div class="produto-info">Código: {item["codigo"]} | Unidade: {item["un"]}</div>
+            st.markdown(
+                f"""
+                <div class="cart-card">
+                    <div class="cart-title">{item["produto"]}</div>
+                    <div class="produto-info">Código: {item["codigo"]} | Unidade: {item["un"]}</div>
 
-                <div class="cart-row">
-                    <div class="cart-mini">Qtd<b>{item["quantidade"]}</b></div>
-                    <div class="cart-mini">Preço<b>{money(item["preco"])}</b></div>
-                    <div class="cart-mini">Desconto<b>{item["desconto"]:.2f}%</b></div>
-                    <div class="cart-mini">Total<b>{money(item["total"])}</b></div>
+                    <div class="cart-grid">
+                        <div class="cart-mini">Qtd<b>{item["quantidade"]}</b></div>
+                        <div class="cart-mini">Preço<b>{money(item["preco"])}</b></div>
+                        <div class="cart-mini">Desconto<b>{item["desconto"]:.2f}%</b></div>
+                        <div class="cart-mini">Total<b>{money(item["total"])}</b></div>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """,
+                unsafe_allow_html=True
+            )
 
-            if st.button(f"🗑️ Remover item {i + 1}", key=f"remover_item_{i}", use_container_width=True):
+            if st.button(
+                f"🗑️ Remover item {i + 1}",
+                key=f"remover_item_{i}",
+                use_container_width=True
+            ):
                 st.session_state.carrinho.pop(i)
                 st.rerun()
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="resumo-pedido">
@@ -468,7 +446,6 @@ def show_new_order() -> None:
             save_table(orders, ORDERS_FILE)
 
             st.session_state.carrinho = []
-            st.session_state.selected_product = None
 
             st.success(f"Pedido nº {number} salvo com sucesso!")
             time.sleep(0.8)
@@ -476,7 +453,6 @@ def show_new_order() -> None:
 
     if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
         st.session_state.carrinho = []
-        st.session_state.selected_product = None
         st.rerun()
 
 
@@ -493,7 +469,6 @@ def edit_order() -> None:
         return
 
     order_list = sorted(orders["pedido"].dropna().unique())
-
     selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
 
     order_items = orders[orders["pedido"] == selected_order].copy()
@@ -509,8 +484,7 @@ def edit_order() -> None:
         return
 
     st.info(
-        f"Pedido nº {selected_order} | Cliente: {order_items['cliente'].iloc[0]} | "
-        f"Status: {status}"
+        f"Pedido nº {selected_order} | Cliente: {order_items['cliente'].iloc[0]} | Status: {status}"
     )
 
     st.markdown("### Itens do pedido")
