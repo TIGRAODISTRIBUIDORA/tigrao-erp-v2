@@ -12,187 +12,143 @@ from users import show_users
 from visual_designer import show_visual_designer
 from ui import apply_style, is_admin
 
-st.set_page_config(page_title="Tigrão ERP", page_icon="🐯", layout="wide")
+st.set_page_config(page_title="Tigrão App", page_icon="🐯", layout="centered")
 
 
-def aplicar_layout_tigrao():
+def aplicar_app_mobile():
     st.markdown("""
     <style>
-    [data-testid="stAppViewContainer"] {
-        background: linear-gradient(180deg, #fff7ed 0%, #f8fafc 100%) !important;
-    }
-
-    .block-container {
-        padding-top: 1rem !important;
-        padding-left: 1.2rem !important;
-        padding-right: 1.2rem !important;
-        max-width: 1320px !important;
-    }
-
     header, footer {
         display: none !important;
     }
 
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #111827 0%, #000000 55%, #7c2d12 100%) !important;
-        border-right: 3px solid #f97316;
+    [data-testid="stSidebar"] {
+        display: none !important;
     }
 
-    section[data-testid="stSidebar"] * {
-        color: #ffffff !important;
-        font-weight: 900 !important;
+    [data-testid="stAppViewContainer"] {
+        background: #f2f4f7 !important;
     }
 
-    section[data-testid="stSidebar"] [role="radiogroup"] label {
-        background: rgba(249,115,22,.18);
-        border-radius: 15px;
-        padding: 11px 13px;
-        margin-bottom: 8px;
-        border: 1px solid rgba(249,115,22,.35);
+    .block-container {
+        max-width: 430px !important;
+        padding: 0 !important;
+        margin: auto !important;
     }
 
-    section[data-testid="stSidebar"] [role="radiogroup"] label:hover {
-        background: #f97316 !important;
-        color: white !important;
+    .app-phone {
+        min-height: 100vh;
+        background: #f2f4f7;
+        font-family: Arial, sans-serif;
     }
 
-    .topo-app {
-        background: linear-gradient(135deg, #000000 0%, #7c2d12 45%, #f97316 100%);
+    .app-top {
+        background: linear-gradient(180deg, #0b8de3, #0671bb);
         color: white;
-        padding: 26px;
-        border-radius: 26px;
-        margin-bottom: 22px;
-        box-shadow: 0 14px 34px rgba(124,45,18,.35);
-        border: 2px solid #fb923c;
+        padding: 18px 18px 14px;
+        border-radius: 0 0 24px 24px;
+        box-shadow: 0 6px 20px rgba(0,0,0,.22);
+        margin-bottom: 14px;
     }
 
-    .topo-app h1 {
-        margin: 0;
-        font-size: 34px;
-        font-weight: 1000;
-        color: white !important;
-        letter-spacing: .3px;
+    .app-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 900;
+        font-size: 15px;
     }
 
-    .topo-app p {
-        margin: 7px 0 0;
-        font-size: 16px;
-        opacity: .96;
-        color: #ffedd5;
+    .app-title {
+        margin-top: 18px;
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+    .app-subtitle {
+        font-size: 13px;
+        opacity: .9;
+        margin-top: 4px;
     }
 
     .app-card {
-        background: #ffffff;
-        border-radius: 24px;
-        padding: 24px;
-        box-shadow: 0 10px 28px rgba(15,23,42,.10);
-        border: 2px solid #fed7aa;
-        margin-bottom: 20px;
+        background: white;
+        margin: 10px;
+        padding: 14px;
+        border-radius: 20px;
+        box-shadow: 0 5px 18px rgba(0,0,0,.10);
+        border: 1px solid #e5e7eb;
+    }
+
+    .menu-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 10px;
+    }
+
+    .menu-btn {
+        background: white;
+        border-radius: 20px;
+        padding: 18px 12px;
+        text-align: center;
+        box-shadow: 0 5px 16px rgba(0,0,0,.10);
+        border: 1px solid #e5e7eb;
+        font-weight: 900;
+        color: #111827;
+        font-size: 14px;
+    }
+
+    .menu-btn span {
+        display: block;
+        font-size: 30px;
+        margin-bottom: 8px;
     }
 
     div.stButton > button {
-        background: linear-gradient(135deg, #f97316, #ea580c) !important;
+        width: 100%;
+        min-height: 58px !important;
+        border-radius: 18px !important;
+        background: #0b8de3 !important;
         color: white !important;
         border: none !important;
-        border-radius: 16px !important;
-        min-height: 55px !important;
+        font-weight: 900 !important;
         font-size: 16px !important;
-        font-weight: 1000 !important;
-        box-shadow: 0 8px 18px rgba(249,115,22,.35);
-    }
-
-    div.stButton > button:hover {
-        background: linear-gradient(135deg, #ea580c, #9a3412) !important;
-        color: white !important;
-        transform: translateY(-1px);
+        box-shadow: 0 5px 14px rgba(11,141,227,.28);
     }
 
     input, textarea {
         border-radius: 16px !important;
-        min-height: 52px !important;
+        min-height: 50px !important;
         font-size: 16px !important;
-        border: 2px solid #fed7aa !important;
-        background: white !important;
-        color: #111827 !important;
     }
 
     div[data-baseweb="select"] > div {
         border-radius: 16px !important;
-        min-height: 52px !important;
-        border: 2px solid #fed7aa !important;
-        background: white !important;
-        color: #111827 !important;
-    }
-
-    [data-testid="stMetric"] {
-        background: #ffffff;
-        border-radius: 22px;
-        padding: 18px;
-        box-shadow: 0 8px 22px rgba(15,23,42,.10);
-        border: 2px solid #fdba74;
-    }
-
-    [data-testid="stMetric"] label {
-        color: #9a3412 !important;
-        font-weight: 900 !important;
-    }
-
-    [data-testid="stDataFrame"] {
-        background: white;
-        border-radius: 18px;
-        overflow: hidden;
-        box-shadow: 0 8px 22px rgba(15,23,42,.08);
-        border: 2px solid #fed7aa;
+        min-height: 50px !important;
     }
 
     h1, h2, h3 {
-        color: #111827 !important;
-        font-weight: 1000 !important;
+        font-size: 22px !important;
+        font-weight: 900 !important;
     }
 
     label {
-        font-weight: 900 !important;
-        color: #111827 !important;
-    }
-
-    .stAlert {
-        border-radius: 18px !important;
-    }
-
-    @media (max-width: 700px) {
-        .block-container {
-            padding: .6rem !important;
-        }
-
-        .topo-app {
-            border-radius: 0 0 24px 24px;
-            margin: -0.6rem -0.6rem 16px -0.6rem;
-            padding: 22px;
-        }
-
-        .topo-app h1 {
-            font-size: 25px;
-        }
-
-        .app-card {
-            padding: 16px;
-            border-radius: 18px;
-        }
-
-        div.stButton > button {
-            width: 100%;
-            min-height: 58px !important;
-        }
+        font-weight: 800 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
 
-def topo(titulo, subtitulo):
+def topo_app(titulo, subtitulo=""):
     st.markdown(f"""
-    <div class="topo-app">
-        <h1>🐯 {titulo}</h1>
-        <p>{subtitulo}</p>
+    <div class="app-top">
+        <div class="app-top-row">
+            <div>🐯 Tigrão</div>
+            <div>{st.session_state.get("vendedor", "")}</div>
+        </div>
+        <div class="app-title">{titulo}</div>
+        <div class="app-subtitle">{subtitulo}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -207,96 +163,128 @@ def fechar_card():
 
 ensure_data_files()
 apply_style()
-aplicar_layout_tigrao()
+aplicar_app_mobile()
 login_screen()
 
-st.sidebar.markdown("## 🐯 TIGRÃO")
-st.sidebar.markdown(f"### {st.session_state.get('vendedor', '')}")
-st.sidebar.markdown(f"Perfil: **{st.session_state.get('perfil', '').upper()}**")
+if "menu_mobile" not in st.session_state:
+    st.session_state.menu_mobile = "Início"
 
-if is_admin():
-    menu_options = [
-        "Dashboard",
-        "Novo Pedido",
-        "Pedidos Lançados",
-        "Clientes",
-        "Produtos",
-        "Fornecedores",
-        "Vendedores",
-        "Importar Produtos",
-        "Comissões",
-        "🎨 Designer Visual",
-        "Sair",
-    ]
-else:
-    menu_options = [
-        "Novo Pedido",
-        "Pedidos Lançados",
-        "Clientes",
-        "Produtos",
-        "Comissões",
-        "Sair",
-    ]
 
-menu = st.sidebar.radio("Menu", menu_options)
+def mudar_menu(nome):
+    st.session_state.menu_mobile = nome
+    st.rerun()
 
-if menu == "Sair":
+
+menu_admin = [
+    ("Dashboard", "📊"),
+    ("Novo Pedido", "🛒"),
+    ("Pedidos Lançados", "📦"),
+    ("Clientes", "👥"),
+    ("Produtos", "🏷️"),
+    ("Fornecedores", "🚚"),
+    ("Vendedores", "👤"),
+    ("Importar Produtos", "📥"),
+    ("Comissões", "💰"),
+    ("Designer Visual", "🎨"),
+    ("Sair", "🚪"),
+]
+
+menu_vendedor = [
+    ("Novo Pedido", "🛒"),
+    ("Pedidos Lançados", "📦"),
+    ("Clientes", "👥"),
+    ("Produtos", "🏷️"),
+    ("Comissões", "💰"),
+    ("Sair", "🚪"),
+]
+
+opcoes = menu_admin if is_admin() else menu_vendedor
+menu = st.session_state.menu_mobile
+
+
+if menu == "Início":
+    topo_app("Menu Principal", "Sistema de pedidos no formato aplicativo")
+
+    st.markdown('<div class="menu-grid">', unsafe_allow_html=True)
+
+    for nome, icone in opcoes:
+        st.markdown(f"""
+        <div class="menu-btn">
+            <span>{icone}</span>
+            {nome}
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button(nome, key=f"btn_{nome}"):
+            mudar_menu(nome)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+elif menu == "Sair":
     logout()
 
-elif menu == "Dashboard":
-    topo("Dashboard", "Visão geral da operação")
-    abrir_card()
-    show_dashboard()
-    fechar_card()
 
-elif menu == "Novo Pedido":
-    topo("Novo Pedido", "Lançamento rápido de pedidos")
-    abrir_card()
-    show_new_order()
-    fechar_card()
+else:
+    if st.button("← Voltar ao menu"):
+        mudar_menu("Início")
 
-elif menu == "Pedidos Lançados":
-    topo("Pedidos Lançados", "Consulta e acompanhamento dos pedidos")
-    abrir_card()
-    show_orders()
-    fechar_card()
+    if menu == "Dashboard":
+        topo_app("Dashboard", "Visão geral da operação")
+        abrir_card()
+        show_dashboard()
+        fechar_card()
 
-elif menu == "Clientes":
-    topo("Clientes", "Cadastro, consulta e edição de clientes")
-    abrir_card()
-    show_clients()
-    fechar_card()
+    elif menu == "Novo Pedido":
+        topo_app("Novo Pedido", "Lançamento rápido de pedidos")
+        abrir_card()
+        show_new_order()
+        fechar_card()
 
-elif menu == "Produtos":
-    topo("Produtos", "Consulta e gestão de produtos")
-    abrir_card()
-    show_products()
-    fechar_card()
+    elif menu == "Pedidos Lançados":
+        topo_app("Pedidos", "Pedidos lançados pelos vendedores")
+        abrir_card()
+        show_orders()
+        fechar_card()
 
-elif menu == "Fornecedores":
-    topo("Fornecedores", "Consulta e cadastro de fornecedores")
-    abrir_card()
-    show_suppliers()
-    fechar_card()
+    elif menu == "Clientes":
+        topo_app("Clientes", "Consulta e cadastro de clientes")
+        abrir_card()
+        show_clients()
+        fechar_card()
 
-elif menu == "Vendedores":
-    topo("Vendedores", "Cadastro e controle da equipe")
-    abrir_card()
-    show_users()
-    fechar_card()
+    elif menu == "Produtos":
+        topo_app("Produtos", "Consulta de produtos e preços")
+        abrir_card()
+        show_products()
+        fechar_card()
 
-elif menu == "Importar Produtos":
-    topo("Importar Produtos", "Atualização da base de produtos")
-    abrir_card()
-    show_import_products()
-    fechar_card()
+    elif menu == "Fornecedores":
+        topo_app("Fornecedores", "Cadastro e consulta")
+        abrir_card()
+        show_suppliers()
+        fechar_card()
 
-elif menu == "Comissões":
-    topo("Comissões", "Controle de vendas e comissões")
-    abrir_card()
-    show_commissions()
-    fechar_card()
+    elif menu == "Vendedores":
+        topo_app("Vendedores", "Equipe comercial")
+        abrir_card()
+        show_users()
+        fechar_card()
 
-elif menu == "🎨 Designer Visual":
-    topo("Designer Visual", "Personalização das telas do sistema")
-    show_visual_designer()
+    elif menu == "Importar Produtos":
+        topo_app("Importar Produtos", "Atualizar base de produtos")
+        abrir_card()
+        show_import_products()
+        fechar_card()
+
+    elif menu == "Comissões":
+        topo_app("Comissões", "Controle de vendas e comissão")
+        abrir_card()
+        show_commissions()
+        fechar_card()
+
+    elif menu == "Designer Visual":
+        topo_app("Designer Visual", "Personalização das telas")
+        abrir_card()
+        show_visual_designer()
+        fechar_card()
