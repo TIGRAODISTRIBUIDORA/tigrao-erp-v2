@@ -18,16 +18,13 @@ st.set_page_config(page_title="Tigrão App", page_icon="🐯", layout="centered"
 def aplicar_app_mobile():
     st.markdown("""
     <style>
-    header, footer {
-        display: none !important;
-    }
+    header, footer { display: none !important; }
 
-    [data-testid="stSidebar"] {
-        display: none !important;
-    }
+    [data-testid="stSidebar"] { display: none !important; }
 
     [data-testid="stAppViewContainer"] {
         background: #f2f4f7 !important;
+        color: #111827 !important;
     }
 
     .block-container {
@@ -36,15 +33,12 @@ def aplicar_app_mobile():
         margin: auto !important;
     }
 
-    .app-phone {
-        min-height: 100vh;
-        background: #f2f4f7;
-        font-family: Arial, sans-serif;
-    }
+    * { color: #111827 !important; }
+
+    .app-top, .app-top * { color: white !important; }
 
     .app-top {
         background: linear-gradient(180deg, #0b8de3, #0671bb);
-        color: white;
         padding: 18px 18px 14px;
         border-radius: 0 0 24px 24px;
         box-shadow: 0 6px 20px rgba(0,0,0,.22);
@@ -67,14 +61,14 @@ def aplicar_app_mobile():
 
     .app-subtitle {
         font-size: 13px;
-        opacity: .9;
+        opacity: .95;
         margin-top: 4px;
     }
 
     .app-card {
-        background: white;
+        background: white !important;
         margin: 10px;
-        padding: 14px;
+        padding: 16px;
         border-radius: 20px;
         box-shadow: 0 5px 18px rgba(0,0,0,.10);
         border: 1px solid #e5e7eb;
@@ -117,38 +111,90 @@ def aplicar_app_mobile():
         box-shadow: 0 5px 14px rgba(11,141,227,.28);
     }
 
+    div.stButton > button * {
+        color: white !important;
+    }
+
     input, textarea {
+        background: white !important;
+        color: #111827 !important;
+        border: 2px solid #cbd5e1 !important;
         border-radius: 16px !important;
-        min-height: 50px !important;
+        min-height: 52px !important;
         font-size: 16px !important;
     }
 
+    input::placeholder {
+        color: #64748b !important;
+        opacity: 1 !important;
+    }
+
     div[data-baseweb="select"] > div {
+        background: white !important;
+        color: #111827 !important;
+        border: 2px solid #cbd5e1 !important;
         border-radius: 16px !important;
-        min-height: 50px !important;
+        min-height: 52px !important;
     }
 
-    h1, h2, h3 {
-        font-size: 22px !important;
-        font-weight: 900 !important;
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div {
+        color: #111827 !important;
     }
 
-    label {
-        font-weight: 800 !important;
+    div[data-baseweb="select"] svg {
+        fill: #111827 !important;
+        color: #111827 !important;
+    }
+
+    label, p, span, h1, h2, h3, h4, h5, h6 {
+        color: #111827 !important;
+        font-weight: 800;
+    }
+
+    .app-top label,
+    .app-top p,
+    .app-top span,
+    .app-top h1,
+    .app-top h2,
+    .app-top h3,
+    .app-top h4,
+    .app-top h5,
+    .app-top h6 {
+        color: white !important;
+    }
+
+    [data-testid="stDataFrame"] {
+        background: white !important;
+        color: #111827 !important;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    [data-testid="stMetric"] {
+        background: white !important;
+        color: #111827 !important;
+        border-radius: 18px;
+        padding: 14px;
+        border: 1px solid #e5e7eb;
     }
     </style>
     """, unsafe_allow_html=True)
 
 
 def topo_app(titulo, subtitulo=""):
+    vendedor = st.session_state.get("vendedor", "")
+    perfil = st.session_state.get("perfil", "").upper()
+
     st.markdown(f"""
     <div class="app-top">
         <div class="app-top-row">
             <div>🐯 Tigrão</div>
-            <div>{st.session_state.get("vendedor", "")}</div>
+            <div>{perfil}</div>
         </div>
         <div class="app-title">{titulo}</div>
         <div class="app-subtitle">{subtitulo}</div>
+        <div class="app-subtitle">{vendedor}</div>
     </div>
     """, unsafe_allow_html=True)
 
