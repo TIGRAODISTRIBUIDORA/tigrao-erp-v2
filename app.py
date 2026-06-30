@@ -15,18 +15,18 @@ from ui import apply_style, is_admin
 st.set_page_config(page_title="Tigrão ERP", page_icon="🐯", layout="wide")
 
 
-def aplicar_layout_app():
+def aplicar_layout_tigrao():
     st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
-        background: #f3f7fb;
+        background: linear-gradient(180deg, #fff7ed 0%, #f8fafc 100%) !important;
     }
 
     .block-container {
         padding-top: 1rem !important;
         padding-left: 1.2rem !important;
         padding-right: 1.2rem !important;
-        max-width: 1300px !important;
+        max-width: 1320px !important;
     }
 
     header, footer {
@@ -34,91 +34,107 @@ def aplicar_layout_app():
     }
 
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0284c7 0%, #075985 55%, #0f172a 100%) !important;
-        border-right: 1px solid rgba(255,255,255,.12);
+        background: linear-gradient(180deg, #111827 0%, #000000 55%, #7c2d12 100%) !important;
+        border-right: 3px solid #f97316;
     }
 
     section[data-testid="stSidebar"] * {
-        color: white !important;
-        font-weight: 800 !important;
+        color: #ffffff !important;
+        font-weight: 900 !important;
     }
 
     section[data-testid="stSidebar"] [role="radiogroup"] label {
-        background: rgba(255,255,255,.10);
-        border-radius: 14px;
-        padding: 10px 12px;
+        background: rgba(249,115,22,.18);
+        border-radius: 15px;
+        padding: 11px 13px;
         margin-bottom: 8px;
-        border: 1px solid rgba(255,255,255,.10);
+        border: 1px solid rgba(249,115,22,.35);
     }
 
     section[data-testid="stSidebar"] [role="radiogroup"] label:hover {
-        background: rgba(255,255,255,.20);
+        background: #f97316 !important;
+        color: white !important;
     }
 
     .topo-app {
-        background: linear-gradient(135deg, #0284c7, #075985);
+        background: linear-gradient(135deg, #000000 0%, #7c2d12 45%, #f97316 100%);
         color: white;
-        padding: 24px;
+        padding: 26px;
         border-radius: 26px;
         margin-bottom: 22px;
-        box-shadow: 0 14px 32px rgba(2,132,199,.25);
+        box-shadow: 0 14px 34px rgba(124,45,18,.35);
+        border: 2px solid #fb923c;
     }
 
     .topo-app h1 {
         margin: 0;
-        font-size: 32px;
-        font-weight: 900;
+        font-size: 34px;
+        font-weight: 1000;
         color: white !important;
+        letter-spacing: .3px;
     }
 
     .topo-app p {
         margin: 7px 0 0;
-        font-size: 15px;
-        opacity: .95;
+        font-size: 16px;
+        opacity: .96;
+        color: #ffedd5;
     }
 
     .app-card {
-        background: white;
+        background: #ffffff;
         border-radius: 24px;
-        padding: 22px;
-        box-shadow: 0 10px 28px rgba(15,23,42,.08);
-        border: 1px solid #e5e7eb;
+        padding: 24px;
+        box-shadow: 0 10px 28px rgba(15,23,42,.10);
+        border: 2px solid #fed7aa;
         margin-bottom: 20px;
     }
 
     div.stButton > button {
-        background: linear-gradient(135deg, #0284c7, #075985) !important;
+        background: linear-gradient(135deg, #f97316, #ea580c) !important;
         color: white !important;
         border: none !important;
         border-radius: 16px !important;
-        min-height: 54px !important;
+        min-height: 55px !important;
         font-size: 16px !important;
-        font-weight: 900 !important;
-        box-shadow: 0 7px 16px rgba(2,132,199,.25);
+        font-weight: 1000 !important;
+        box-shadow: 0 8px 18px rgba(249,115,22,.35);
     }
 
     div.stButton > button:hover {
-        background: linear-gradient(135deg, #0369a1, #0f172a) !important;
+        background: linear-gradient(135deg, #ea580c, #9a3412) !important;
+        color: white !important;
         transform: translateY(-1px);
     }
 
     input, textarea {
         border-radius: 16px !important;
-        min-height: 50px !important;
+        min-height: 52px !important;
         font-size: 16px !important;
+        border: 2px solid #fed7aa !important;
+        background: white !important;
+        color: #111827 !important;
     }
 
     div[data-baseweb="select"] > div {
         border-radius: 16px !important;
-        min-height: 50px !important;
+        min-height: 52px !important;
+        border: 2px solid #fed7aa !important;
+        background: white !important;
+        color: #111827 !important;
     }
 
     [data-testid="stMetric"] {
-        background: white;
+        background: #ffffff;
         border-radius: 22px;
         padding: 18px;
-        box-shadow: 0 8px 22px rgba(15,23,42,.08);
-        border: 1px solid #e5e7eb;
+        box-shadow: 0 8px 22px rgba(15,23,42,.10);
+        border: 2px solid #fdba74;
+    }
+
+    [data-testid="stMetric"] label {
+        color: #9a3412 !important;
+        font-weight: 900 !important;
     }
 
     [data-testid="stDataFrame"] {
@@ -126,16 +142,21 @@ def aplicar_layout_app():
         border-radius: 18px;
         overflow: hidden;
         box-shadow: 0 8px 22px rgba(15,23,42,.08);
+        border: 2px solid #fed7aa;
     }
 
     h1, h2, h3 {
-        color: #0f172a;
-        font-weight: 900;
+        color: #111827 !important;
+        font-weight: 1000 !important;
     }
 
     label {
-        font-weight: 800 !important;
-        color: #0f172a !important;
+        font-weight: 900 !important;
+        color: #111827 !important;
+    }
+
+    .stAlert {
+        border-radius: 18px !important;
     }
 
     @media (max-width: 700px) {
@@ -146,15 +167,15 @@ def aplicar_layout_app():
         .topo-app {
             border-radius: 0 0 24px 24px;
             margin: -0.6rem -0.6rem 16px -0.6rem;
-            padding: 20px;
+            padding: 22px;
         }
 
         .topo-app h1 {
-            font-size: 24px;
+            font-size: 25px;
         }
 
         .app-card {
-            padding: 15px;
+            padding: 16px;
             border-radius: 18px;
         }
 
@@ -186,7 +207,7 @@ def fechar_card():
 
 ensure_data_files()
 apply_style()
-aplicar_layout_app()
+aplicar_layout_tigrao()
 login_screen()
 
 st.sidebar.markdown("## 🐯 TIGRÃO")
