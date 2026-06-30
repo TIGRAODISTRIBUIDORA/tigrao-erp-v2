@@ -34,8 +34,52 @@ def buscar_cnpj_brasilapi(cnpj):
         return None, f"Erro de conexão: {e}"
 
 
+def inicializar_campos_cliente():
+    campos = {
+        "cliente_cnpj": "",
+        "cliente_ie": "",
+        "cliente_nome": "",
+        "cliente_fantasia": "",
+        "cliente_telefone": "",
+        "cliente_email": "",
+        "cliente_cidade": "",
+        "cliente_estado": "",
+        "cliente_endereco": "",
+        "cliente_numero": "",
+        "cliente_bairro": "",
+        "cliente_cep": "",
+        "cliente_situacao": "",
+    }
+
+    for key, valor in campos.items():
+        if key not in st.session_state:
+            st.session_state[key] = valor
+
+
+def limpar_campos_cliente():
+    for key in [
+        "cliente_cnpj",
+        "cliente_ie",
+        "cliente_nome",
+        "cliente_fantasia",
+        "cliente_telefone",
+        "cliente_email",
+        "cliente_cidade",
+        "cliente_estado",
+        "cliente_endereco",
+        "cliente_numero",
+        "cliente_bairro",
+        "cliente_cep",
+        "cliente_situacao",
+    ]:
+        if key in st.session_state:
+            del st.session_state[key]
+
+
 def show_clients() -> None:
     title("👥 Clientes")
+
+    inicializar_campos_cliente()
 
     clients = read_table(CLIENTS_FILE)
 
@@ -43,6 +87,7 @@ def show_clients() -> None:
         "codigo",
         "cliente",
         "cnpj",
+        "inscricao_estadual",
         "telefone",
         "cidade",
         "estado",
@@ -70,42 +115,6 @@ def show_clients() -> None:
     with st.expander("Cadastrar cliente", expanded=True):
         st.markdown("### Cadastro de Cliente")
 
-        if "cliente_cnpj" not in st.session_state:
-            st.session_state.cliente_cnpj = ""
-
-        if "cliente_nome" not in st.session_state:
-            st.session_state.cliente_nome = ""
-
-        if "cliente_fantasia" not in st.session_state:
-            st.session_state.cliente_fantasia = ""
-
-        if "cliente_telefone" not in st.session_state:
-            st.session_state.cliente_telefone = ""
-
-        if "cliente_email" not in st.session_state:
-            st.session_state.cliente_email = ""
-
-        if "cliente_cidade" not in st.session_state:
-            st.session_state.cliente_cidade = ""
-
-        if "cliente_estado" not in st.session_state:
-            st.session_state.cliente_estado = ""
-
-        if "cliente_endereco" not in st.session_state:
-            st.session_state.cliente_endereco = ""
-
-        if "cliente_numero" not in st.session_state:
-            st.session_state.cliente_numero = ""
-
-        if "cliente_bairro" not in st.session_state:
-            st.session_state.cliente_bairro = ""
-
-        if "cliente_cep" not in st.session_state:
-            st.session_state.cliente_cep = ""
-
-        if "cliente_situacao" not in st.session_state:
-            st.session_state.cliente_situacao = ""
-
         cnpj = st.text_input("CNPJ", key="cliente_cnpj")
 
         if st.button("🔎 Buscar CNPJ", use_container_width=True):
@@ -131,6 +140,7 @@ def show_clients() -> None:
 
         nome = st.text_input("Nome do Cliente / Razão Social", key="cliente_nome")
         nome_fantasia = st.text_input("Nome Fantasia", key="cliente_fantasia")
+        inscricao_estadual = st.text_input("Inscrição Estadual", key="cliente_ie")
         telefone = st.text_input("Telefone", key="cliente_telefone")
         email = st.text_input("E-mail", key="cliente_email")
         endereco = st.text_input("Endereço", key="cliente_endereco")
@@ -181,6 +191,7 @@ def show_clients() -> None:
                 "codigo": novo_codigo,
                 "cliente": nome,
                 "cnpj": cnpj,
+                "inscricao_estadual": inscricao_estadual,
                 "telefone": telefone,
                 "cidade": cidade,
                 "estado": estado,
@@ -204,23 +215,7 @@ def show_clients() -> None:
             save_table(all_clients, CLIENTS_FILE)
 
             st.success("Cliente salvo com sucesso!")
-
-            for key in [
-                "cliente_cnpj",
-                "cliente_nome",
-                "cliente_fantasia",
-                "cliente_telefone",
-                "cliente_email",
-                "cliente_cidade",
-                "cliente_estado",
-                "cliente_endereco",
-                "cliente_numero",
-                "cliente_bairro",
-                "cliente_cep",
-                "cliente_situacao",
-            ]:
-                st.session_state[key] = ""
-
+            limpar_campos_cliente()
             st.rerun()
 
     st.markdown("---")
