@@ -1,6 +1,21 @@
 import streamlit as st
+from html import escape
 
 from database import COMMISSION_RATE, ORDERS_FILE, money, read_table
+
+
+def card_dashboard(icone, titulo, valor, descricao):
+    st.markdown(
+        f"""
+        <div class="dash-card">
+            <div class="dash-icon">{icone}</div>
+            <div class="dash-label">{titulo}</div>
+            <div class="dash-value">{valor}</div>
+            <div class="dash-desc">{descricao}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 
 def show_dashboard() -> None:
@@ -31,18 +46,19 @@ def show_dashboard() -> None:
         opacity: .18;
     }
 
-    .dash-logo {
+    .dash-logo, .dash-title, .dash-subtitle {
         color: white !important;
+    }
+
+    .dash-logo {
         font-size: 15px;
         font-weight: 900;
         margin-bottom: 28px;
     }
 
     .dash-title {
-        color: white !important;
         font-size: 34px;
         font-weight: 1000;
-        margin-bottom: 4px;
     }
 
     .dash-subtitle {
@@ -135,16 +151,9 @@ def show_dashboard() -> None:
         align-items: center;
     }
 
-    .order-number {
+    .order-number, .order-total {
         color: #f97316 !important;
         font-weight: 1000;
-        font-size: 15px;
-    }
-
-    .order-total {
-        color: #f97316 !important;
-        font-weight: 1000;
-        font-size: 16px;
     }
 
     .order-client {
@@ -160,12 +169,6 @@ def show_dashboard() -> None:
         font-size: 12px;
         margin-top: 3px;
     }
-
-    @media (min-width: 700px) {
-        .dash-cards {
-            grid-template-columns: repeat(3, 1fr);
-        }
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -177,30 +180,11 @@ def show_dashboard() -> None:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="dash-cards">
-        <div class="dash-card">
-            <div class="dash-icon">📋</div>
-            <div class="dash-label">Pedidos</div>
-            <div class="dash-value">{total_orders}</div>
-            <div class="dash-desc">Total de pedidos</div>
-        </div>
-
-        <div class="dash-card">
-            <div class="dash-icon">💰</div>
-            <div class="dash-label">Vendas</div>
-            <div class="dash-value">{money(total_sales)}</div>
-            <div class="dash-desc">Valor total de vendas</div>
-        </div>
-
-        <div class="dash-card">
-            <div class="dash-icon">%</div>
-            <div class="dash-label">Comissão 7%</div>
-            <div class="dash-value">{money(commission)}</div>
-            <div class="dash-desc">Valor da comissão</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="dash-cards">', unsafe_allow_html=True)
+    card_dashboard("📋", "Pedidos", total_orders, "Total de pedidos")
+    card_dashboard("💰", "Vendas", money(total_sales), "Valor total de vendas")
+    card_dashboard("%", "Comissão 7%", money(commission), "Valor da comissão")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="orders-title">🕘 Últimos pedidos</div>', unsafe_allow_html=True)
 
@@ -210,24 +194,23 @@ def show_dashboard() -> None:
         st.markdown('<div class="orders-box">', unsafe_allow_html=True)
 
         for _, row in ultimos.iterrows():
-            pedido = row.get("pedido", "")
-            data = row.get("data", "")
-            vendedor = row.get("vendedor", "")
-            cliente = row.get("cliente", "")
-            total = row.get("total", 0)
+            pedido = escape(str(row.get("pedido", "")))
+            data = escape(str(row.get("data", "")))
+            vendedor = escape(str(row.get("vendedor", "")))
+            cliente = escape(str(row.get("cliente", "")))
+            total = money(row.get("total", 0))
 
             st.markdown(f"""
             <div class="order-row">
                 <div class="order-top">
                     <div class="order-number">Pedido #{pedido}</div>
-                    <div class="order-total">{money(total)}</div>
+                    <div class="order-total">{total}</div>
                 </div>
                 <div class="order-client">{cliente}</div>
                 <div class="order-info">{data} • {vendedor}</div>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)
-
+        st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("Nenhum pedido lançado ainda.")
