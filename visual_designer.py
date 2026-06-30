@@ -1,5 +1,6 @@
 import os
 import json
+import uuid
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -69,12 +70,46 @@ def show_visual_designer():
 
     title("🎨 Designer Visual")
 
-    st.info("Arraste os blocos com o mouse, aumente/diminua pelas bordas e clique em Copiar Layout. Depois cole no campo abaixo e salve.")
-
     layout = load_layout()
 
     tela = st.selectbox("Tela para editar", list(layout.keys()))
     blocos = layout[tela]
+
+    st.markdown("### ➕ Adicionar novo bloco")
+
+    c1, c2, c3 = st.columns([2, 1, 1])
+
+    with c1:
+        novo_nome = st.text_input("Nome do novo bloco", placeholder="Ex: Botão Desconto")
+
+    with c2:
+        novo_tipo = st.selectbox("Tipo", ["Botão", "Campo", "Tabela", "Card", "Imagem"])
+
+    with c3:
+        st.write("")
+        st.write("")
+        if st.button("➕ Adicionar", use_container_width=True):
+            if novo_nome.strip():
+                novo_id = str(uuid.uuid4())[:8]
+                blocos.append({
+                    "id": novo_id,
+                    "label": novo_nome.strip(),
+                    "tipo": novo_tipo,
+                    "x": 40,
+                    "y": 40,
+                    "w": 220,
+                    "h": 80,
+                    "show": True
+                })
+                layout[tela] = blocos
+                save_layout(layout)
+                st.success("Bloco adicionado.")
+                st.rerun()
+            else:
+                st.warning("Digite o nome do bloco.")
+
+    st.markdown("---")
+    st.info("Arraste os blocos, aumente/diminua pelas bordas e clique em 📋 Copiar Layout. Depois cole no campo de salvar.")
 
     html = f"""
     <!DOCTYPE html>
@@ -98,6 +133,7 @@ def show_visual_designer():
                 display: flex;
                 gap: 10px;
                 align-items: center;
+                flex-wrap: wrap;
             }}
 
             button {{
@@ -110,9 +146,25 @@ def show_visual_designer():
                 cursor: pointer;
             }}
 
+            button.red {{
+                background: #dc2626;
+            }}
+
+            button.gray {{
+                background: #475569;
+            }}
+
+            select {{
+                padding: 10px;
+                border-radius: 8px;
+                background: #020617;
+                color: white;
+                border: 1px solid #334155;
+            }}
+
             textarea {{
                 width: 100%;
-                height: 120px;
+                height: 140px;
                 margin-top: 10px;
                 background: #020617;
                 color: #22c55e;
@@ -125,7 +177,7 @@ def show_visual_designer():
             #canvas {{
                 position: relative;
                 width: 100%;
-                height: 780px;
+                height: 850px;
                 background:
                     linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
                     linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
@@ -149,6 +201,11 @@ def show_visual_designer():
                 box-shadow: 0 8px 20px rgba(0,0,0,.35);
             }}
 
+            .box.selected {{
+                outline: 4px solid #22c55e;
+                z-index: 10;
+            }}
+
             .box small {{
                 display: block;
                 margin-top: 8px;
@@ -166,30 +223,84 @@ def show_visual_designer():
     <body>
         <div class="toolbar">
             <button onclick="copyLayout()">📋 Copiar Layout</button>
-            <span>Arraste e redimensione os blocos. Depois copie o layout.</span>
+            <button class="gray" onclick="toggleSelected()">👁️ Mostrar/Ocultar</button>
+            <button class="red" onclick="deleteSelected()">🗑️ Excluir Selecionado</button>
+            <span>Selecione um bloco, arraste, redimensione e copie o layout.</span>
         </div>
 
         <div id="canvas"></div>
 
-        <textarea id="output" placeholder="O JSON do layout aparecerá aqui..."></textarea>
+        <textarea id="output" placeholder="O JSON do layout aparecerá aqui automaticamente..."></textarea>
 
         <script>
             let blocks = {json.dumps(blocos, ensure_ascii=False)};
+            let selectedIndex = null;
 
             const canvas = document.getElementById("canvas");
+            const output = document.getElementById("output");
+
+            function updateOutput() {{
+                output.value = JSON.stringify(blocks, null, 4);
+            }}
+
+            function selectBlock(index) {{
+                selectedIndex = index;
+                draw();
+            }}
+
+            function deleteSelected() {{
+                if (selectedIndex === null) {{
+                    alert("Selecione um bloco primeiro.");
+                    return;
+                }}
+
+                if (confirm("Excluir esse bloco do layout?")) {{
+                    blocks.splice(selectedIndex, 1);
+                    selectedIndex = null;
+                    draw();
+                    updateOutput();
+                }}
+            }}
+
+            function toggleSelected() {{
+                if (selectedIndex === null) {{
+                    alert("Selecione um bloco primeiro.");
+                    return;
+                }}
+
+                blocks[selectedIndex].show = !blocks[selectedIndex].show;
+                draw();
+                updateOutput();
+            }}
 
             function draw() {{
                 canvas.innerHTML = "";
 
                 blocks.forEach((b, index) => {{
+                    if (b.show === undefined) b.show = true;
+
                     const div = document.createElement("div");
-                    div.className = "box" + (b.show ? "" : " hidden-box");
+                    div.className = "box" + (b.show ? "" : " hidden-box") + (selectedIndex === index ? " selected" : "");
                     div.dataset.index = index;
                     div.style.left = b.x + "px";
                     div.style.top = b.y + "px";
                     div.style.width = b.w + "px";
                     div.style.height = b.h + "px";
-                    div.innerHTML = b.label + "<small>X: " + b.x + " | Y: " + b.y + " | W: " + b.w + " | H: " + b.h + "</small>";
+
+                    div.innerHTML =
+                        b.label +
+                        "<small>X: " + b.x +
+                        " | Y: " + b.y +
+                        " | W: " + b.w +
+                        " | H: " + b.h +
+                        " | " + (b.show ? "Visível" : "Oculto") +
+                        "</small>";
+
+                    div.onclick = function(e) {{
+                        e.stopPropagation();
+                        selectBlock(index);
+                    }};
+
                     canvas.appendChild(div);
                 }});
 
@@ -199,15 +310,23 @@ def show_visual_designer():
                             move(event) {{
                                 const target = event.target;
                                 const index = parseInt(target.dataset.index);
-                                blocks[index].x += event.dx;
-                                blocks[index].y += event.dy;
 
-                                blocks[index].x = Math.round(blocks[index].x);
-                                blocks[index].y = Math.round(blocks[index].y);
+                                blocks[index].x = Math.round(blocks[index].x + event.dx);
+                                blocks[index].y = Math.round(blocks[index].y + event.dy);
 
                                 target.style.left = blocks[index].x + "px";
                                 target.style.top = blocks[index].y + "px";
-                                target.innerHTML = blocks[index].label + "<small>X: " + blocks[index].x + " | Y: " + blocks[index].y + " | W: " + blocks[index].w + " | H: " + blocks[index].h + "</small>";
+
+                                target.innerHTML =
+                                    blocks[index].label +
+                                    "<small>X: " + blocks[index].x +
+                                    " | Y: " + blocks[index].y +
+                                    " | W: " + blocks[index].w +
+                                    " | H: " + blocks[index].h +
+                                    " | " + (blocks[index].show ? "Visível" : "Oculto") +
+                                    "</small>";
+
+                                updateOutput();
                             }}
                         }}
                     }})
@@ -220,37 +339,57 @@ def show_visual_designer():
 
                                 blocks[index].w = Math.round(event.rect.width);
                                 blocks[index].h = Math.round(event.rect.height);
-
-                                blocks[index].x += Math.round(event.deltaRect.left);
-                                blocks[index].y += Math.round(event.deltaRect.top);
+                                blocks[index].x = Math.round(blocks[index].x + event.deltaRect.left);
+                                blocks[index].y = Math.round(blocks[index].y + event.deltaRect.top);
 
                                 target.style.width = blocks[index].w + "px";
                                 target.style.height = blocks[index].h + "px";
                                 target.style.left = blocks[index].x + "px";
                                 target.style.top = blocks[index].y + "px";
-                                target.innerHTML = blocks[index].label + "<small>X: " + blocks[index].x + " | Y: " + blocks[index].y + " | W: " + blocks[index].w + " | H: " + blocks[index].h + "</small>";
+
+                                target.innerHTML =
+                                    blocks[index].label +
+                                    "<small>X: " + blocks[index].x +
+                                    " | Y: " + blocks[index].y +
+                                    " | W: " + blocks[index].w +
+                                    " | H: " + blocks[index].h +
+                                    " | " + (blocks[index].show ? "Visível" : "Oculto") +
+                                    "</small>";
+
+                                updateOutput();
                             }}
                         }}
                     }});
             }}
 
             function copyLayout() {{
-                document.getElementById("output").value = JSON.stringify(blocks, null, 4);
+                updateOutput();
                 navigator.clipboard.writeText(JSON.stringify(blocks, null, 4));
+                alert("Layout copiado. Agora cole no campo abaixo e clique em salvar.");
             }}
 
+            canvas.onclick = function() {{
+                selectedIndex = null;
+                draw();
+            }};
+
             draw();
+            updateOutput();
         </script>
     </body>
     </html>
     """
 
-    components.html(html, height=980, scrolling=True)
+    components.html(html, height=1050, scrolling=True)
 
     st.markdown("---")
-    st.markdown("### 💾 Salvar layout copiado")
+    st.markdown("### 💾 Salvar layout atualizado")
 
-    novo_json = st.text_area("Cole aqui o layout copiado", height=220)
+    novo_json = st.text_area(
+        "Cole aqui o layout copiado do Designer Visual",
+        height=260,
+        placeholder="Cole aqui o JSON copiado..."
+    )
 
     c1, c2 = st.columns([1, 1])
 
@@ -258,10 +397,17 @@ def show_visual_designer():
         if st.button("💾 Salvar Layout Visual", use_container_width=True):
             try:
                 novos_blocos = json.loads(novo_json)
+
+                if not isinstance(novos_blocos, list):
+                    st.error("O layout precisa ser uma lista JSON.")
+                    return
+
                 layout[tela] = novos_blocos
                 save_layout(layout)
+
                 st.success("Layout visual salvo com sucesso.")
                 st.rerun()
+
             except Exception as e:
                 st.error(f"Erro ao salvar layout: {e}")
 
