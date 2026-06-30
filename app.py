@@ -19,7 +19,6 @@ def aplicar_app_mobile():
     st.markdown("""
     <style>
     header, footer { display: none !important; }
-
     [data-testid="stSidebar"] { display: none !important; }
 
     [data-testid="stAppViewContainer"] {
@@ -109,6 +108,24 @@ def aplicar_app_mobile():
         font-weight: 900 !important;
         font-size: 16px !important;
         box-shadow: 0 5px 14px rgba(11,141,227,.28);
+        transition: all 0.12s ease-in-out !important;
+        cursor: pointer !important;
+    }
+
+    div.stButton > button:hover {
+        background: #0671bb !important;
+        transform: translateY(-1px);
+    }
+
+    div.stButton > button:active {
+        background: #22c55e !important;
+        transform: scale(0.96);
+        box-shadow: 0 0 0 6px rgba(34,197,94,.28) !important;
+    }
+
+    div.stButton > button:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 6px rgba(34,197,94,.30) !important;
     }
 
     div.stButton > button * {
