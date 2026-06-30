@@ -1,584 +1,126 @@
-import os
-import json
-import uuid
+import time
+import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 
-from ui import is_admin, title
+from database import (
+    CLIENTS_FILE,
+    ORDERS_FILE,
+    PRODUCTS_FILE,
+    money,
+    next_order_number,
+    now_text,
+    read_table,
+    save_table,
+    to_excel_bytes,
+)
+from visual_designer import get_visual_layout
+from ui import is_admin, metric_card, title
 
-DATA_DIR = "dados"
-LAYOUT_FILE = os.path.join(DATA_DIR, "visual_layout.json")
-
-os.makedirs(DATA_DIR, exist_ok=True)
-
-
-DEFAULT_LAYOUT = {
-    "Dashboard": [
-        {"id": "cards_dashboard", "label": "Cards Dashboard", "tipo": "Card", "x": 20, "y": 20, "w": 860, "h": 160, "font": 18, "show": True},
-        {"id": "grafico_dashboard", "label": "Gráfico Dashboard", "tipo": "Gráfico", "x": 20, "y": 200, "w": 860, "h": 300, "font": 18, "show": True},
-    ],
-
-    "Novo Pedido": [
-        {"id": "cliente", "label": "Cliente", "tipo": "Campo", "x": 20, "y": 20, "w": 260, "h": 70, "font": 18, "show": True},
-        {"id": "fornecedor", "label": "Fornecedor", "tipo": "Campo", "x": 20, "y": 110, "w": 220, "h": 70, "font": 18, "show": True},
-        {"id": "produto", "label": "Produto", "tipo": "Campo", "x": 260, "y": 110, "w": 420, "h": 70, "font": 18, "show": True},
-        {"id": "adicionar", "label": "Botão Adicionar", "tipo": "Botão", "x": 700, "y": 110, "w": 180, "h": 70, "font": 18, "show": True},
-        {"id": "produto_selecionado", "label": "Produto Selecionado", "tipo": "Card", "x": 20, "y": 200, "w": 600, "h": 90, "font": 18, "show": True},
-        {"id": "quantidade", "label": "Quantidade", "tipo": "Campo", "x": 20, "y": 310, "w": 180, "h": 70, "font": 18, "show": True},
-        {"id": "desconto", "label": "Desconto", "tipo": "Campo", "x": 220, "y": 310, "w": 180, "h": 70, "font": 18, "show": True},
-        {"id": "total_item", "label": "Total do Item", "tipo": "Campo", "x": 420, "y": 310, "w": 220, "h": 70, "font": 18, "show": True},
-        {"id": "carrinho", "label": "Carrinho", "tipo": "Tabela", "x": 20, "y": 400, "w": 860, "h": 220, "font": 18, "show": True},
-        {"id": "finalizar", "label": "Finalizar Pedido", "tipo": "Botão", "x": 20, "y": 640, "w": 220, "h": 70, "font": 18, "show": True},
-        {"id": "limpar", "label": "Limpar Pedido", "tipo": "Botão", "x": 260, "y": 640, "w": 220, "h": 70, "font": 18, "show": True},
-    ],
-
-    "Pedidos Lançados": [
-        {"id": "tabela_pedidos", "label": "Tabela Pedidos", "tipo": "Tabela", "x": 20, "y": 20, "w": 860, "h": 300, "font": 18, "show": True},
-        {"id": "baixar_excel", "label": "Baixar Excel", "tipo": "Botão", "x": 20, "y": 340, "w": 220, "h": 70, "font": 18, "show": True},
-        {"id": "alterar_pedido", "label": "Alterar Pedido", "tipo": "Card", "x": 20, "y": 430, "w": 860, "h": 300, "font": 18, "show": True},
-        {"id": "excluir_pedido", "label": "Excluir Pedido", "tipo": "Card", "x": 20, "y": 750, "w": 400, "h": 120, "font": 18, "show": True},
-    ],
-
-    "Clientes": [
-        {"id": "cadastrar_cliente", "label": "Cadastrar Cliente", "tipo": "Card", "x": 20, "y": 20, "w": 600, "h": 220, "font": 18, "show": True},
-        {"id": "buscar_cliente", "label": "Buscar Cliente", "tipo": "Campo", "x": 20, "y": 260, "w": 420, "h": 70, "font": 18, "show": True},
-        {"id": "card_cliente", "label": "Card Cliente", "tipo": "Card", "x": 20, "y": 350, "w": 600, "h": 160, "font": 18, "show": True},
-    ],
-
-    "Produtos": [
-        {"id": "cadastrar_produto", "label": "Cadastrar Produto", "tipo": "Card", "x": 20, "y": 20, "w": 600, "h": 240, "font": 18, "show": True},
-        {"id": "exportar_produtos", "label": "Exportar Produtos", "tipo": "Botão", "x": 20, "y": 280, "w": 600, "h": 100, "font": 18, "show": True},
-        {"id": "consultar_produto", "label": "Consultar Produto", "tipo": "Campo", "x": 20, "y": 400, "w": 420, "h": 70, "font": 18, "show": True},
-        {"id": "botao_buscar", "label": "Botão Buscar", "tipo": "Botão", "x": 460, "y": 400, "w": 90, "h": 70, "font": 18, "show": True},
-        {"id": "card_produto", "label": "Card Produto", "tipo": "Card", "x": 20, "y": 500, "w": 500, "h": 160, "font": 18, "show": True},
-        {"id": "imagem_produto", "label": "Imagem Produto", "tipo": "Imagem", "x": 560, "y": 500, "w": 240, "h": 260, "font": 18, "show": True},
-    ],
-
-    "Fornecedores": [
-        {"id": "cadastrar_fornecedor", "label": "Cadastrar Fornecedor", "tipo": "Card", "x": 20, "y": 20, "w": 600, "h": 220, "font": 18, "show": True},
-        {"id": "lista_fornecedores", "label": "Lista Fornecedores", "tipo": "Tabela", "x": 20, "y": 260, "w": 860, "h": 300, "font": 18, "show": True},
-    ],
-
-    "Vendedores": [
-        {"id": "cadastrar_vendedor", "label": "Cadastrar Vendedor", "tipo": "Card", "x": 20, "y": 20, "w": 600, "h": 220, "font": 18, "show": True},
-        {"id": "lista_vendedores", "label": "Lista Vendedores", "tipo": "Tabela", "x": 20, "y": 260, "w": 860, "h": 300, "font": 18, "show": True},
-    ],
-
-    "Importar Produtos": [
-        {"id": "modelo_importacao", "label": "Modelo Importação", "tipo": "Botão", "x": 20, "y": 20, "w": 500, "h": 100, "font": 18, "show": True},
-        {"id": "upload_planilha", "label": "Upload Planilha", "tipo": "Campo", "x": 20, "y": 140, "w": 500, "h": 100, "font": 18, "show": True},
-        {"id": "preview_importacao", "label": "Prévia Importação", "tipo": "Tabela", "x": 20, "y": 260, "w": 860, "h": 300, "font": 18, "show": True},
-        {"id": "botao_importar", "label": "Botão Importar", "tipo": "Botão", "x": 20, "y": 580, "w": 260, "h": 70, "font": 18, "show": True},
-    ],
-
-    "Comissões": [
-        {"id": "resumo_comissoes", "label": "Resumo Comissões", "tipo": "Card", "x": 20, "y": 20, "w": 600, "h": 160, "font": 18, "show": True},
-        {"id": "tabela_comissoes", "label": "Tabela Comissões", "tipo": "Tabela", "x": 20, "y": 200, "w": 860, "h": 300, "font": 18, "show": True},
-    ],
-}
-
-
-def save_layout(layout):
-    with open(LAYOUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(layout, f, ensure_ascii=False, indent=4)
-
-
-def load_layout():
-    if not os.path.exists(LAYOUT_FILE):
-        save_layout(DEFAULT_LAYOUT)
-        return DEFAULT_LAYOUT.copy()
-
+def _safe_float(value):
     try:
-        with open(LAYOUT_FILE, "r", encoding="utf-8") as f:
-            saved = json.load(f)
-
-        layout = DEFAULT_LAYOUT.copy()
-
-        for tela, blocos in saved.items():
-            layout[tela] = blocos
-
-        for tela, blocos in DEFAULT_LAYOUT.items():
-            if tela not in layout:
-                layout[tela] = blocos
-
-        return layout
-
+        return float(value)
     except Exception:
-        return DEFAULT_LAYOUT.copy()
+        return 0.0
 
+def _prepare_products(products):
+    if "codigo" not in products.columns:
+        products["codigo"] = ""
+    if "produto" not in products.columns:
+        products["produto"] = ""
+    if "un" not in products.columns:
+        products["un"] = "UN"
+    if "preco" not in products.columns:
+        products["preco"] = 0
+    if "fornecedor" not in products.columns:
+        products["fornecedor"] = ""
 
-def get_visual_layout(tela):
-    layout = load_layout()
-    return layout.get(tela, [])
+    products["codigo"] = products["codigo"].astype(str).str.strip()
+    products["produto"] = products["produto"].astype(str).str.strip()
+    products["un"] = products["un"].astype(str).str.strip()
+    products["fornecedor"] = products["fornecedor"].astype(str).str.strip()
+    products["preco"] = pd.to_numeric(products["preco"], errors="coerce").fillna(0)
 
-
-def show_visual_designer():
-    if not is_admin():
-        st.error("Acesso permitido somente para administrador.")
-        st.stop()
-
-    title("🎨 Designer Visual")
-
-    layout = load_layout()
-
-    tela = st.selectbox(
-        "Tela para editar",
-        list(layout.keys())
+    products = products[products["produto"] != ""]
+    products = products.drop_duplicates(
+        subset=["codigo", "produto", "preco", "fornecedor"],
+        keep="last"
     )
 
-    blocos = layout[tela]
+    return products.reset_index(drop=True)
 
-    st.markdown("### ➕ Adicionar novo bloco")
+def _supplier_options(products):
+    fornecedores = []
 
-    c1, c2, c3 = st.columns([2, 1, 1])
-
-    with c1:
-        novo_nome = st.text_input(
-            "Nome do novo bloco",
-            placeholder="Ex: Botão Desconto"
+    if len(products) and "fornecedor" in products.columns:
+        fornecedores = sorted(
+            products["fornecedor"]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+            .replace("", pd.NA)
+            .dropna()
+            .unique()
+            .tolist()
         )
 
-    with c2:
-        novo_tipo = st.selectbox(
-            "Tipo",
-            ["Botão", "Campo", "Tabela", "Card", "Imagem", "Gráfico", "Texto"]
+    return ["Todos"] + fornecedores
+
+def _filter_by_supplier(products, supplier):
+    if supplier and supplier != "Todos":
+        return products[
+            products["fornecedor"].astype(str).str.strip() == supplier
+        ].reset_index(drop=True)
+
+    return products.reset_index(drop=True)
+
+def _product_options(products):
+    options = ["Selecione ou digite o produto"]
+
+    for _, row in products.iterrows():
+        options.append(
+            f"{row.get('codigo', '')} - {row.get('produto', '')} | "
+            f"{money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
         )
 
-    with c3:
-        st.write("")
-        st.write("")
-        if st.button("➕ Adicionar", use_container_width=True):
-            if novo_nome.strip():
-                novo_id = str(uuid.uuid4())[:8]
+    return options
 
-                blocos.append({
-                    "id": novo_id,
-                    "label": novo_nome.strip(),
-                    "tipo": novo_tipo,
-                    "x": 40,
-                    "y": 40,
-                    "w": 220,
-                    "h": 80,
-                    "font": 18,
-                    "show": True
-                })
+def _get_product_from_option(products, selected_text):
+    options = _product_options(products)
 
-                layout[tela] = blocos
-                save_layout(layout)
+    if selected_text == "Selecione ou digite o produto":
+        return None
 
-                st.success("Bloco adicionado.")
-                st.rerun()
-            else:
-                st.warning("Digite o nome do bloco.")
+    if selected_text not in options:
+        return None
 
-    st.markdown("---")
+    idx = options.index(selected_text) - 1
 
-    st.info(
-        "Arraste os blocos, aumente ou diminua pelas bordas, altere fonte, "
-        "oculte, duplique ou exclua. Depois clique em Copiar Layout e salve."
-    )
+    if idx < 0:
+        return None
 
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    return products.iloc[idx].to_dict()
 
-        <style>
-            body {{
-                margin: 0;
-                font-family: Arial, sans-serif;
-                background: #0f172a;
-                color: white;
-            }}
+def _add_item_to_cart(product, quantity, discount):
+    codigo = str(product.get("codigo", ""))
+    produto = str(product.get("produto", ""))
+    unidade = str(product.get("un", "UN"))
+    price = _safe_float(product.get("preco", 0))
 
-            .toolbar {{
-                padding: 12px;
-                background: #111827;
-                border-radius: 10px;
-                margin-bottom: 12px;
-                display: flex;
-                gap: 10px;
-                align-items: center;
-                flex-wrap: wrap;
-            }}
+    subtotal = price * quantity
+    total = subtotal - (subtotal * discount / 100)
 
-            button {{
-                background: #f97316;
-                border: none;
-                color: white;
-                padding: 10px 14px;
-                border-radius: 8px;
-                font-weight: bold;
-                cursor: pointer;
-            }}
+    st.session_state.carrinho.append({
+        "codigo": codigo,
+        "produto": produto,
+        "un": unidade,
+        "quantidade": quantity,
+        "preco": price,
+        "desconto": discount,
+        "subtotal": subtotal,
+        "total": total,
+    })
 
-            button.red {{
-                background: #dc2626;
-            }}
-
-            button.green {{
-                background: #16a34a;
-            }}
-
-            button.gray {{
-                background: #475569;
-            }}
-
-            input {{
-                width: 70px;
-                padding: 9px;
-                border-radius: 8px;
-                background: #020617;
-                color: white;
-                border: 1px solid #334155;
-                font-weight: bold;
-            }}
-
-            textarea {{
-                width: 100%;
-                height: 160px;
-                margin-top: 10px;
-                background: #020617;
-                color: #22c55e;
-                border: 1px solid #334155;
-                border-radius: 8px;
-                padding: 10px;
-                font-size: 12px;
-            }}
-
-            #canvas {{
-                position: relative;
-                width: 100%;
-                height: 950px;
-                background:
-                    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-                background-size: 20px 20px;
-                border: 2px solid #334155;
-                border-radius: 14px;
-                overflow: hidden;
-            }}
-
-            .box {{
-                position: absolute;
-                background: #f97316;
-                border: 2px solid #fb923c;
-                border-radius: 12px;
-                color: white;
-                padding: 10px;
-                box-sizing: border-box;
-                cursor: move;
-                user-select: none;
-                font-weight: 800;
-                box-shadow: 0 8px 20px rgba(0,0,0,.35);
-                overflow: hidden;
-            }}
-
-            .box.selected {{
-                outline: 4px solid #22c55e;
-                z-index: 10;
-            }}
-
-            .box small {{
-                display: block;
-                margin-top: 8px;
-                font-size: 11px;
-                color: #fff7ed;
-                line-height: 1.4;
-            }}
-
-            .hidden-box {{
-                opacity: 0.35;
-                background: #64748b;
-                border-color: #94a3b8;
-            }}
-        </style>
-    </head>
-
-    <body>
-        <div class="toolbar">
-            <button onclick="copyLayout()">📋 Copiar Layout</button>
-            <button class="gray" onclick="toggleSelected()">👁️ Mostrar/Ocultar</button>
-            <button class="green" onclick="duplicateSelected()">📄 Duplicar</button>
-            <button class="red" onclick="deleteSelected()">🗑️ Excluir</button>
-
-            <span>Fonte:</span>
-            <button onclick="changeFont(-1)">A-</button>
-            <input id="fontInput" type="number" value="18" onchange="setFontFromInput()">
-            <button onclick="changeFont(1)">A+</button>
-
-            <span>Selecione um bloco e edite.</span>
-        </div>
-
-        <div id="canvas"></div>
-
-        <textarea id="output" placeholder="O JSON do layout aparecerá aqui automaticamente..."></textarea>
-
-        <script>
-            let blocks = {json.dumps(blocos, ensure_ascii=False)};
-            let selectedIndex = null;
-
-            const canvas = document.getElementById("canvas");
-            const output = document.getElementById("output");
-            const fontInput = document.getElementById("fontInput");
-
-            function normalizeBlock(b) {{
-                if (b.x === undefined) b.x = 20;
-                if (b.y === undefined) b.y = 20;
-                if (b.w === undefined) b.w = 220;
-                if (b.h === undefined) b.h = 80;
-                if (b.font === undefined) b.font = 18;
-                if (b.show === undefined) b.show = true;
-                if (b.tipo === undefined) b.tipo = "Bloco";
-                return b;
-            }}
-
-            function updateOutput() {{
-                output.value = JSON.stringify(blocks, null, 4);
-            }}
-
-            function selectBlock(index) {{
-                selectedIndex = index;
-                fontInput.value = blocks[index].font || 18;
-                draw();
-            }}
-
-            function deleteSelected() {{
-                if (selectedIndex === null) {{
-                    alert("Selecione um bloco primeiro.");
-                    return;
-                }}
-
-                if (confirm("Excluir esse bloco do layout?")) {{
-                    blocks.splice(selectedIndex, 1);
-                    selectedIndex = null;
-                    draw();
-                    updateOutput();
-                }}
-            }}
-
-            function duplicateSelected() {{
-                if (selectedIndex === null) {{
-                    alert("Selecione um bloco primeiro.");
-                    return;
-                }}
-
-                let original = blocks[selectedIndex];
-                let novo = JSON.parse(JSON.stringify(original));
-
-                novo.id = Math.random().toString(36).substring(2, 10);
-                novo.label = original.label + " Cópia";
-                novo.x = original.x + 30;
-                novo.y = original.y + 30;
-
-                blocks.push(novo);
-                selectedIndex = blocks.length - 1;
-
-                draw();
-                updateOutput();
-            }}
-
-            function toggleSelected() {{
-                if (selectedIndex === null) {{
-                    alert("Selecione um bloco primeiro.");
-                    return;
-                }}
-
-                blocks[selectedIndex].show = !blocks[selectedIndex].show;
-                draw();
-                updateOutput();
-            }}
-
-            function changeFont(delta) {{
-                if (selectedIndex === null) {{
-                    alert("Selecione um bloco primeiro.");
-                    return;
-                }}
-
-                blocks[selectedIndex].font = Math.max(8, (blocks[selectedIndex].font || 18) + delta);
-                fontInput.value = blocks[selectedIndex].font;
-
-                draw();
-                updateOutput();
-            }}
-
-            function setFontFromInput() {{
-                if (selectedIndex === null) {{
-                    alert("Selecione um bloco primeiro.");
-                    return;
-                }}
-
-                blocks[selectedIndex].font = Math.max(8, parseInt(fontInput.value || 18));
-                draw();
-                updateOutput();
-            }}
-
-            function draw() {{
-                canvas.innerHTML = "";
-
-                blocks.forEach((b, index) => {{
-                    b = normalizeBlock(b);
-
-                    const div = document.createElement("div");
-                    div.className =
-                        "box" +
-                        (b.show ? "" : " hidden-box") +
-                        (selectedIndex === index ? " selected" : "");
-
-                    div.dataset.index = index;
-
-                    div.style.left = b.x + "px";
-                    div.style.top = b.y + "px";
-                    div.style.width = b.w + "px";
-                    div.style.height = b.h + "px";
-                    div.style.fontSize = b.font + "px";
-
-                    div.innerHTML =
-                        b.label +
-                        "<small>" +
-                        "Tipo: " + b.tipo +
-                        "<br>X: " + b.x +
-                        " | Y: " + b.y +
-                        " | W: " + b.w +
-                        " | H: " + b.h +
-                        " | Fonte: " + b.font +
-                        "<br>" + (b.show ? "Visível" : "Oculto") +
-                        "</small>";
-
-                    div.onclick = function(e) {{
-                        e.stopPropagation();
-                        selectBlock(index);
-                    }};
-
-                    canvas.appendChild(div);
-                }});
-
-                interact(".box")
-                    .draggable({{
-                        listeners: {{
-                            move(event) {{
-                                const target = event.target;
-                                const index = parseInt(target.dataset.index);
-
-                                blocks[index].x = Math.round(blocks[index].x + event.dx);
-                                blocks[index].y = Math.round(blocks[index].y + event.dy);
-
-                                target.style.left = blocks[index].x + "px";
-                                target.style.top = blocks[index].y + "px";
-
-                                updateOutput();
-                                draw();
-                            }}
-                        }}
-                    }})
-                    .resizable({{
-                        edges: {{
-                            left: true,
-                            right: true,
-                            bottom: true,
-                            top: true
-                        }},
-                        listeners: {{
-                            move(event) {{
-                                const target = event.target;
-                                const index = parseInt(target.dataset.index);
-
-                                blocks[index].w = Math.max(40, Math.round(event.rect.width));
-                                blocks[index].h = Math.max(35, Math.round(event.rect.height));
-                                blocks[index].x = Math.round(blocks[index].x + event.deltaRect.left);
-                                blocks[index].y = Math.round(blocks[index].y + event.deltaRect.top);
-
-                                target.style.width = blocks[index].w + "px";
-                                target.style.height = blocks[index].h + "px";
-                                target.style.left = blocks[index].x + "px";
-                                target.style.top = blocks[index].y + "px";
-
-                                updateOutput();
-                                draw();
-                            }}
-                        }}
-                    }});
-            }}
-
-            function copyLayout() {{
-                updateOutput();
-                navigator.clipboard.writeText(JSON.stringify(blocks, null, 4));
-                alert("Layout copiado. Agora cole no campo abaixo e clique em salvar.");
-            }}
-
-            canvas.onclick = function() {{
-                selectedIndex = null;
-                draw();
-            }};
-
-            blocks = blocks.map(normalizeBlock);
-            draw();
-            updateOutput();
-        </script>
-    </body>
-    </html>
-    """
-
-    components.html(html, height=1160, scrolling=True)
-
-    st.markdown("---")
-    st.markdown("### 💾 Salvar layout atualizado")
-
-    novo_json = st.text_area(
-        "Cole aqui o layout copiado do Designer Visual",
-        height=260,
-        placeholder="Cole aqui o JSON copiado..."
-    )
-
-    c1, c2 = st.columns([1, 1])
-
-    with c1:
-        if st.button("💾 Salvar Layout Visual", use_container_width=True):
-            try:
-                novos_blocos = json.loads(novo_json)
-
-                if not isinstance(novos_blocos, list):
-                    st.error("O layout precisa ser uma lista JSON.")
-                    return
-
-                layout[tela] = novos_blocos
-                save_layout(layout)
-
-                st.success("Layout visual salvo com sucesso.")
-                st.rerun()
-
-            except Exception as e:
-                st.error(f"Erro ao salvar layout: {e}")
-
-    with c2:
-        if st.button("🔄 Restaurar Padrão", use_container_width=True):
-            save_layout(DEFAULT_LAYOUT.copy())
-            st.success("Layout padrão restaurado.")
-            st.rerun()def _renderizar_visual(blocos, componentes):
-    st.markdown(
-        """
-        <style>
-        .stButton button {
-            min-height: 60px !important;
-            font-size: 18px !important;
-            font-weight: 800 !important;
-        }
-
-        div[data-baseweb="select"] {
-            font-size: 18px !important;
-        }
-
-        div[data-baseweb="input"] input {
-            font-size: 18px !important;
-            min-height: 55px !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
+def _renderizar_visual(blocos, componentes):
     blocos_ordenados = sorted(
         blocos.items(),
         key=lambda item: (
@@ -604,7 +146,7 @@ def show_visual_designer():
             w = float(cfg.get("w", 120))
 
             espaco = max(0.1, (x - pos_atual) / 100)
-            largura = max(0.5, w / 80)
+            largura = max(0.5, w / 100)
 
             if espaco > 0.1:
                 colunas.append(espaco)
@@ -618,14 +160,10 @@ def show_visual_designer():
 
         idx_col = 0
         pos_atual = 0
-        maior_altura = 70
 
         for nome, cfg in itens:
             x = float(cfg.get("x", 0))
             w = float(cfg.get("w", 120))
-            h = float(cfg.get("h", 70))
-
-            maior_altura = max(maior_altura, h)
 
             espaco = max(0.1, (x - pos_atual) / 100)
 
@@ -636,13 +174,529 @@ def show_visual_designer():
                 if nome in componentes:
                     componentes[nome]()
 
-                sobra_altura = max(0, int((h - 70) / 20))
-                for _ in range(sobra_altura):
-                    st.write("")
-
             idx_col += 1
             pos_atual = x + w
 
-        espaco_linha = max(0, int((maior_altura - 70) / 25))
-        for _ in range(espaco_linha):
-            st.write("")
+        st.markdown("")
+
+def show_new_order() -> None:
+    title("🛒 Novo Pedido")
+
+    blocos_lista = get_visual_layout("Novo Pedido")
+    blocos = {
+        b["label"]: b
+        for b in blocos_lista
+        if b.get("show", True)
+    }
+
+    products = read_table(PRODUCTS_FILE)
+    products = _prepare_products(products)
+
+    clients = read_table(CLIENTS_FILE)
+
+    if "carrinho" not in st.session_state:
+        st.session_state.carrinho = []
+
+    if "selected_product" not in st.session_state:
+        st.session_state.selected_product = None
+
+    if "produto_adicionado" not in st.session_state:
+        st.session_state.produto_adicionado = False
+
+    if "novo_pedido_cliente" not in st.session_state:
+        st.session_state.novo_pedido_cliente = ""
+
+    if "novo_pedido_fornecedor_valor" not in st.session_state:
+        st.session_state.novo_pedido_fornecedor_valor = "Todos"
+
+    if "novo_pedido_add_clicked" not in st.session_state:
+        st.session_state.novo_pedido_add_clicked = False
+
+    seller = st.session_state.get("vendedor", "")
+
+    if len(products) == 0:
+        st.warning("Nenhum produto cadastrado.")
+        st.stop()
+
+    def bloco_cliente():
+        client_list = (
+            clients["cliente"].astype(str).tolist()
+            if "cliente" in clients.columns and len(clients)
+            else ["CLIENTE PADRÃO"]
+        )
+
+        st.session_state.novo_pedido_cliente = st.selectbox(
+            "Cliente",
+            client_list,
+            key="novo_pedido_cliente_selectbox"
+        )
+
+    def bloco_fornecedor():
+        st.session_state.novo_pedido_fornecedor_valor = st.selectbox(
+            "Fornecedor",
+            _supplier_options(products),
+            key="novo_pedido_fornecedor",
+        )
+
+    def bloco_produto():
+        fornecedor = st.session_state.get("novo_pedido_fornecedor_valor", "Todos")
+        filtered_products = _filter_by_supplier(products, fornecedor)
+
+        selected_text = st.selectbox(
+            "🔍 Buscar produto por código, nome ou fornecedor",
+            _product_options(filtered_products),
+            key=f"novo_pedido_produto_selectbox_{fornecedor}",
+            label_visibility="collapsed",
+        )
+
+        st.session_state.selected_product = _get_product_from_option(
+            filtered_products,
+            selected_text
+        )
+
+    def bloco_botao_adicionar():
+        st.write("")
+        st.write("")
+
+        clicked = st.button("➕ ADICIONAR", use_container_width=True)
+
+        if clicked:
+            st.session_state.novo_pedido_add_clicked = True
+
+        if st.session_state.get("produto_adicionado"):
+            st.markdown(
+                """
+                <div style="
+                    background:#16a34a;
+                    color:white;
+                    padding:10px;
+                    border-radius:8px;
+                    text-align:center;
+                    font-weight:800;
+                    animation: blink 0.35s alternate 3;
+                    margin-top:8px;
+                ">
+                    ✅ Produto adicionado
+                </div>
+
+                <style>
+                @keyframes blink {
+                    from { opacity: 0.35; }
+                    to { opacity: 1; }
+                }
+                </style>
+                """,
+                unsafe_allow_html=True,
+            )
+            st.session_state.produto_adicionado = False
+
+    def bloco_produto_selecionado():
+        product = st.session_state.get("selected_product")
+
+        if not product:
+            return
+
+        codigo = str(product.get("codigo", ""))
+        produto = str(product.get("produto", ""))
+        fornecedor = str(product.get("fornecedor", ""))
+        price = _safe_float(product.get("preco", 0))
+
+        st.markdown("### Produto selecionado")
+
+        st.markdown(
+            f"""
+            <div class='card' style="max-width:720px;">
+                <b>{codigo} - {produto}</b><br>
+                Preço: {money(price)}<br>
+                Fornecedor: {fornecedor}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    def bloco_quantidade():
+        st.session_state.novo_pedido_quantidade = st.number_input(
+            "Quantidade",
+            min_value=0,
+            value=0,
+            step=1,
+            key="novo_pedido_quantidade_input"
+        )
+
+    def bloco_desconto():
+        st.session_state.novo_pedido_desconto = st.number_input(
+            "% Desconto",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            key="novo_pedido_desconto_input"
+        )
+
+    def bloco_total_item():
+        product = st.session_state.get("selected_product")
+
+        if not product:
+            st.text_input(
+                "Total do item",
+                value=money(0),
+                disabled=True,
+                key="novo_pedido_total_item_vazio"
+            )
+            return
+
+        quantity = st.session_state.get("novo_pedido_quantidade", 0)
+        discount = st.session_state.get("novo_pedido_desconto", 0.0)
+        price = _safe_float(product.get("preco", 0))
+
+        subtotal = price * quantity
+        total = subtotal - (subtotal * discount / 100)
+
+        st.text_input(
+            "Total do item",
+            value=money(total),
+            disabled=True,
+            key="novo_pedido_total_item_input"
+        )
+
+    def bloco_carrinho():
+        st.markdown(f"### Carrinho ({len(st.session_state.carrinho)} itens)")
+
+        if len(st.session_state.carrinho):
+            cart = pd.DataFrame(st.session_state.carrinho)
+            st.dataframe(cart, use_container_width=True, height=320)
+
+            subtotal_general = cart["subtotal"].sum()
+            total_general = cart["total"].sum()
+            discount_general = subtotal_general - total_general
+
+            r1, r2, r3 = st.columns(3)
+
+            with r1:
+                metric_card("Subtotal", money(subtotal_general))
+            with r2:
+                metric_card("Desconto", money(discount_general))
+            with r3:
+                metric_card("Total", money(total_general))
+        else:
+            st.info("Nenhum produto adicionado ao pedido.")
+
+    def bloco_finalizar():
+        if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
+            if len(st.session_state.carrinho) == 0:
+                st.warning("Adicione pelo menos um produto.")
+            else:
+                orders = read_table(ORDERS_FILE)
+                number = next_order_number()
+                date = now_text()
+
+                client = st.session_state.get("novo_pedido_cliente", "")
+
+                rows = []
+
+                for item in st.session_state.carrinho:
+                    rows.append({
+                        "pedido": number,
+                        "data": date,
+                        "vendedor": seller,
+                        "cliente": client,
+                        "codigo": item["codigo"],
+                        "produto": item["produto"],
+                        "un": item["un"],
+                        "quantidade": item["quantidade"],
+                        "preco": item["preco"],
+                        "desconto": item["desconto"],
+                        "subtotal": item["subtotal"],
+                        "total": item["total"],
+                        "status": "PENDENTE",
+                    })
+
+                orders = pd.concat([orders, pd.DataFrame(rows)], ignore_index=True)
+                save_table(orders, ORDERS_FILE)
+
+                st.session_state.carrinho = []
+                st.session_state.selected_product = None
+
+                st.success(f"Pedido nº {number} salvo com sucesso!")
+                st.rerun()
+
+    def bloco_limpar():
+        if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
+            st.session_state.carrinho = []
+            st.session_state.selected_product = None
+            st.rerun()
+
+    componentes = {
+        "Cliente": bloco_cliente,
+        "Fornecedor": bloco_fornecedor,
+        "Produto": bloco_produto,
+        "Botão Adicionar": bloco_botao_adicionar,
+        "Produto Selecionado": bloco_produto_selecionado,
+        "Quantidade": bloco_quantidade,
+        "Desconto": bloco_desconto,
+        "Total do Item": bloco_total_item,
+        "Carrinho": bloco_carrinho,
+        "Finalizar Pedido": bloco_finalizar,
+        "Limpar Pedido": bloco_limpar,
+    }
+
+    _renderizar_visual(blocos, componentes)
+
+    if st.session_state.get("novo_pedido_add_clicked"):
+        product = st.session_state.get("selected_product")
+        quantity = st.session_state.get("novo_pedido_quantidade", 0)
+        discount = st.session_state.get("novo_pedido_desconto", 0.0)
+
+        st.session_state.novo_pedido_add_clicked = False
+
+        if not product:
+            st.warning("Selecione um produto antes de adicionar.")
+        elif quantity <= 0:
+            st.warning("Informe a quantidade antes de adicionar.")
+        else:
+            _add_item_to_cart(product, quantity, discount)
+            st.session_state.selected_product = None
+            st.session_state.produto_adicionado = True
+            time.sleep(0.3)
+            st.rerun()
+
+def edit_order() -> None:
+    st.markdown("---")
+    st.markdown("## ✏️ Alterar Pedido")
+
+    orders = read_table(ORDERS_FILE)
+    products = read_table(PRODUCTS_FILE)
+    products = _prepare_products(products)
+
+    if len(orders) == 0:
+        st.info("Nenhum pedido disponível para alteração.")
+        return
+
+    order_list = sorted(orders["pedido"].dropna().unique())
+
+    col_pedido, col_vazio = st.columns([1.5, 2.5])
+
+    with col_pedido:
+        selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
+
+    order_items = orders[orders["pedido"] == selected_order].copy()
+
+    if len(order_items) == 0:
+        st.warning("Pedido não encontrado.")
+        return
+
+    status = str(order_items["status"].iloc[0]) if "status" in order_items.columns else "PENDENTE"
+
+    if status.upper() == "FATURADO" and not is_admin():
+        st.error("Pedido faturado não pode ser alterado pelo vendedor.")
+        return
+
+    st.info(
+        f"Pedido nº {selected_order} | Cliente: {order_items['cliente'].iloc[0]} | "
+        f"Status: {status}"
+    )
+
+    st.markdown("### Itens do pedido")
+
+    updated_rows = []
+
+    for idx, row in order_items.iterrows():
+        st.markdown("---")
+        c1, c2, c3, c4, c5 = st.columns([4, 1, 1, 1, 1])
+
+        with c1:
+            st.markdown(f"**{row['codigo']} - {row['produto']}**")
+            st.caption(f"Preço unitário: {money(_safe_float(row['preco']))}")
+
+        with c2:
+            new_qty = st.number_input(
+                "Qtd",
+                min_value=0,
+                value=int(row["quantidade"]),
+                step=1,
+                key=f"edit_qty_{selected_order}_{idx}",
+            )
+
+        with c3:
+            new_discount = st.number_input(
+                "% Desc.",
+                min_value=0.0,
+                value=_safe_float(row["desconto"]),
+                step=1.0,
+                key=f"edit_desc_{selected_order}_{idx}",
+            )
+
+        price = _safe_float(row["preco"])
+        subtotal = price * new_qty
+        total = subtotal - (subtotal * new_discount / 100)
+
+        with c4:
+            st.write("Total")
+            st.write(money(total))
+
+        with c5:
+            remove = st.checkbox("Excluir", key=f"remove_{selected_order}_{idx}")
+
+        if not remove and new_qty > 0:
+            new_row = row.to_dict()
+            new_row["quantidade"] = new_qty
+            new_row["desconto"] = new_discount
+            new_row["subtotal"] = subtotal
+            new_row["total"] = total
+            updated_rows.append(new_row)
+
+    st.markdown("---")
+    st.markdown("### ➕ Adicionar novo produto ao pedido")
+
+    supplier_col, product_col, empty_col = st.columns([1.2, 2.4, 2.2])
+
+    with supplier_col:
+        edit_supplier_filter = st.selectbox(
+            "Fornecedor",
+            _supplier_options(products),
+            key="edit_order_fornecedor",
+        )
+
+    edit_filtered_products = _filter_by_supplier(products, edit_supplier_filter)
+
+    with product_col:
+        selected_text = st.selectbox(
+            "Buscar produto para adicionar",
+            _product_options(edit_filtered_products),
+            key=f"edit_order_product_selectbox_{edit_supplier_filter}",
+            label_visibility="collapsed",
+        )
+
+    product = _get_product_from_option(edit_filtered_products, selected_text)
+
+    if product:
+        c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
+
+        price = _safe_float(product.get("preco", 0))
+
+        with c1:
+            st.markdown(f"**{product.get('codigo', '')} - {product.get('produto', '')}**")
+            st.caption(f"Preço: {money(price)}")
+
+        with c2:
+            add_qty = st.number_input(
+                "Qtd.",
+                min_value=1,
+                value=1,
+                step=1,
+                key="edit_add_qty",
+            )
+
+        with c3:
+            add_discount = st.number_input(
+                "% Desc.",
+                min_value=0.0,
+                value=0.0,
+                step=1.0,
+                key="edit_add_discount",
+            )
+
+        subtotal = price * add_qty
+        total = subtotal - (subtotal * add_discount / 100)
+
+        with c4:
+            st.write("Total")
+            st.write(money(total))
+
+        if st.button("➕ Adicionar produto ao pedido"):
+            base = order_items.iloc[0].to_dict()
+
+            new_item = {
+                "pedido": selected_order,
+                "data": base.get("data", now_text()),
+                "vendedor": base.get("vendedor", ""),
+                "cliente": base.get("cliente", ""),
+                "codigo": product.get("codigo", ""),
+                "produto": product.get("produto", ""),
+                "un": product.get("un", "UN"),
+                "quantidade": add_qty,
+                "preco": price,
+                "desconto": add_discount,
+                "subtotal": subtotal,
+                "total": total,
+                "status": status,
+            }
+
+            updated_rows.append(new_item)
+            st.success("Produto adicionado na alteração. Clique em Salvar Alterações.")
+            time.sleep(0.5)
+
+    st.markdown("---")
+
+    if len(updated_rows):
+        preview = pd.DataFrame(updated_rows)
+        st.markdown("### Prévia do pedido alterado")
+        st.dataframe(preview, use_container_width=True)
+
+        total_order = preview["total"].sum()
+        metric_card("Novo total do pedido", money(total_order))
+    else:
+        st.warning("O pedido ficará sem itens se salvar essa alteração.")
+
+    if st.button("💾 SALVAR ALTERAÇÕES DO PEDIDO"):
+        if len(updated_rows) == 0:
+            st.warning("Não é possível salvar pedido sem itens.")
+            return
+
+        all_orders = read_table(ORDERS_FILE)
+        all_orders = all_orders[all_orders["pedido"] != selected_order]
+
+        updated_df = pd.DataFrame(updated_rows)
+        all_orders = pd.concat([all_orders, updated_df], ignore_index=True)
+
+        save_table(all_orders, ORDERS_FILE)
+
+        st.success(f"Pedido nº {selected_order} atualizado com sucesso!")
+        time.sleep(0.8)
+        st.rerun()
+
+def show_orders() -> None:
+    title("📋 Pedidos Lançados")
+
+    orders = read_table(ORDERS_FILE)
+
+    if len(orders) == 0:
+        st.info("Nenhum pedido lançado.")
+        return
+
+    st.dataframe(orders, use_container_width=True)
+
+    st.download_button(
+        "⬇️ Baixar pedidos em Excel",
+        to_excel_bytes(orders),
+        file_name="pedidos_tigrao.xlsx",
+    )
+
+    edit_order()
+
+    if is_admin():
+        st.markdown("---")
+        st.markdown("### 🗑️ Excluir Pedido")
+
+        order_list = sorted(orders["pedido"].dropna().unique())
+        selected = st.selectbox("Selecione o número do pedido que deseja excluir", order_list)
+
+        order_data = orders[orders["pedido"] == selected]
+
+        if len(order_data):
+            st.warning(
+                f"Você está prestes a excluir o pedido nº {selected} "
+                f"do cliente {order_data['cliente'].iloc[0]}, "
+                f"total {money(order_data['total'].sum())}."
+            )
+
+        confirm = st.checkbox(f"Confirmo que desejo excluir o pedido nº {selected}")
+
+        if st.button("🗑️ EXCLUIR PEDIDO"):
+            if not confirm:
+                st.warning("Marque a confirmação antes de excluir.")
+            else:
+                orders = orders[orders["pedido"] != selected]
+                save_table(orders, ORDERS_FILE)
+
+                st.success(f"Pedido nº {selected} excluído com sucesso.")
+                st.rerun()
