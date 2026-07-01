@@ -172,16 +172,6 @@ def _mobile_css_orders():
         line-height: 1.5 !important;
     }
 
-    img {
-        max-width: 100% !important;
-        height: auto !important;
-        max-height: 260px !important;
-        object-fit: contain !important;
-        border-radius: 18px !important;
-        display: block !important;
-        margin: 10px auto !important;
-    }
-
     div[data-baseweb="select"] span {
         white-space: nowrap !important;
         overflow: hidden !important;
@@ -217,56 +207,79 @@ def _mobile_css_orders():
         background: #ffffff !important;
         border: 1px solid #e5e7eb !important;
         border-radius: 18px !important;
-        padding: 12px !important;
+        padding: 10px !important;
         margin: 12px 0 !important;
         box-shadow: 0 4px 14px rgba(15,23,42,.08) !important;
     }
 
     .cart-header {
         display: grid !important;
-        grid-template-columns: 42px 1fr 48px 70px 58px 80px !important;
-        gap: 6px !important;
-        padding: 8px 4px !important;
+        grid-template-columns: 34px 1fr 42px 64px 64px 76px !important;
+        gap: 5px !important;
+        padding: 7px 2px !important;
         border-bottom: 2px solid #e5e7eb !important;
         font-size: 11px !important;
         font-weight: 1000 !important;
         color: #111827 !important;
+        align-items: center !important;
+        text-align: center !important;
     }
 
-    .cart-row {
-        display: grid !important;
-        grid-template-columns: 42px 1fr 48px 70px 58px 80px !important;
-        gap: 6px !important;
-        align-items: center !important;
-        padding: 9px 4px !important;
-        border-bottom: 1px solid #e5e7eb !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        color: #111827 !important;
+    .cart-header div:nth-child(2) {
+        text-align: left !important;
     }
 
     .cart-product {
         color: #0b8de3 !important;
         font-weight: 1000 !important;
-        line-height: 1.25 !important;
-        word-break: break-word !important;
+        line-height: 1.2 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        font-size: 14px !important;
+        max-width: 100% !important;
     }
 
     .cart-code {
         font-size: 10px !important;
         color: #64748b !important;
         font-weight: 800 !important;
-        margin-top: 3px !important;
-    }
-
-    .trash-btn {
-        text-align: center !important;
-        font-size: 20px !important;
+        margin-top: 2px !important;
     }
 
     .cart-value {
         font-weight: 900 !important;
         color: #111827 !important;
+        text-align: center !important;
+        font-size: 13px !important;
+        padding-top: 9px !important;
+    }
+
+    .cart-total-value {
+        font-weight: 1000 !important;
+        color: #0b8de3 !important;
+        text-align: right !important;
+        font-size: 14px !important;
+        padding-top: 9px !important;
+    }
+
+    div[data-testid="column"] div.stButton > button {
+        min-height: 34px !important;
+        height: 34px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+        font-size: 15px !important;
+        box-shadow: none !important;
+    }
+
+    div[data-testid="stNumberInput"] input {
+        min-height: 34px !important;
+        height: 34px !important;
+        padding: 3px 5px !important;
+        text-align: center !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        border-radius: 10px !important;
     }
 
     .resumo-pedido {
@@ -417,6 +430,7 @@ def show_new_order() -> None:
                 <div>Desc.</div>
                 <div>Total</div>
             </div>
+        </div>
         """, unsafe_allow_html=True)
 
         for i, item in enumerate(st.session_state.carrinho):
@@ -428,7 +442,7 @@ def show_new_order() -> None:
             total = _safe_float(item.get("total", 0))
 
             col_lixeira, col_produto, col_qtd, col_preco, col_desc, col_total = st.columns(
-                [0.45, 2.5, 0.8, 1.1, 0.9, 1.2]
+                [0.45, 3.8, 0.8, 1.2, 1.1, 1.4]
             )
 
             with col_lixeira:
@@ -456,7 +470,10 @@ def show_new_order() -> None:
                 )
 
             with col_preco:
-                st.markdown(f"<div class='cart-value'>{money(preco)}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div class='cart-value'>{money(preco)}</div>",
+                    unsafe_allow_html=True
+                )
 
             with col_desc:
                 novo_desc = st.number_input(
@@ -469,15 +486,18 @@ def show_new_order() -> None:
                 )
 
             with col_total:
-                st.markdown(f"<div class='cart-value'>{money(total)}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div class='cart-total-value'>{money(total)}</div>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown("<hr style='margin:6px 0;border:0;border-top:1px solid #e5e7eb;'>", unsafe_allow_html=True)
 
             if nova_qtd != quantidade or novo_desc != desconto:
                 st.session_state.carrinho[i]["quantidade"] = nova_qtd
                 st.session_state.carrinho[i]["desconto"] = novo_desc
                 _recalcular_item(i)
                 st.rerun()
-
-        st.markdown("</div>", unsafe_allow_html=True)
 
         cart = pd.DataFrame(st.session_state.carrinho)
         subtotal_general = cart["subtotal"].sum()
