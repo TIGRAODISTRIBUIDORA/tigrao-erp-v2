@@ -5,10 +5,6 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-# =========================================================
-# CONFIGURAÇÃO
-# =========================================================
-
 st.set_page_config(
     page_title="Tigrão V2",
     page_icon="🐯",
@@ -25,14 +21,13 @@ ARQ_USUARIOS = f"{PASTA_DADOS}/usuarios.xlsx"
 COMISSAO_PADRAO = 0.07
 
 
-# =========================================================
+# =========================
 # BANCO DE DADOS
-# =========================================================
+# =========================
 
 def criar_banco():
     os.makedirs(PASTA_DADOS, exist_ok=True)
 
-    # Recria usuários padrão para não dar erro de login.
     usuarios = pd.DataFrame([
         {
             "usuario": "admin",
@@ -49,6 +44,7 @@ def criar_banco():
             "comissao": 0.07,
         },
     ])
+
     usuarios.to_excel(ARQ_USUARIOS, index=False)
 
     if not os.path.exists(ARQ_CLIENTES):
@@ -56,24 +52,21 @@ def criar_banco():
             {"codigo": 1, "cliente": "NELSON DAS GALAXIAS", "cnpj": "", "telefone": "", "cidade": ""},
             {"codigo": 2, "cliente": "DROGANNE MEDICAMENTOS E PERFUMARIA LTDA", "cnpj": "", "telefone": "", "cidade": ""},
             {"codigo": 3, "cliente": "NATURA TERRA COMERCIO E SERVICOS LTDA", "cnpj": "", "telefone": "", "cidade": ""},
-            {"codigo": 4, "cliente": "TESTE DE GRAVIDEZ", "cnpj": "", "telefone": "", "cidade": ""},
         ])
         clientes.to_excel(ARQ_CLIENTES, index=False)
 
     if not os.path.exists(ARQ_PRODUTOS):
         produtos = pd.DataFrame([
-            {"codigo": "68.0", "produto": "BENETONICO 500M", "un": "UN", "preco": 10.21, "fornecedor": "ARTE NATIVA", "imagem": ""},
-            {"codigo": "103.0", "produto": "APIS FRESH SPRAY EXTRA FORTE 35ML", "un": "UN", "preco": 5.82, "fornecedor": "ARTE NATIVA", "imagem": ""},
-            {"codigo": "126.0", "produto": "POTE DOCE BANANINHA ZERO AÇÚCAR", "un": "UN", "preco": 60.86, "fornecedor": "TIGRÃO", "imagem": ""},
-            {"codigo": "94.0", "produto": "HALLS EXTRA FORTE 8 UN", "un": "UN", "preco": 12.17, "fornecedor": "MONDELEZ", "imagem": ""},
-            {"codigo": "178.0", "produto": "BALDONI EXTRATO DE PROPOLIS VERDE 30ML", "un": "UN", "preco": 20.89, "fornecedor": "BALDONI", "imagem": ""},
+            {"codigo": "68.0", "produto": "BENETONICO 500M", "un": "UN", "preco": 10.21, "fornecedor": "ARTE NATIVA"},
+            {"codigo": "103.0", "produto": "APIS FRESH SPRAY EXTRA FORTE 35ML", "un": "UN", "preco": 5.82, "fornecedor": "ARTE NATIVA"},
+            {"codigo": "178.0", "produto": "BALDONI EXTRATO DE PROPOLIS VERDE 30ML", "un": "UN", "preco": 20.89, "fornecedor": "BALDONI"},
         ])
         produtos.to_excel(ARQ_PRODUTOS, index=False)
 
     if not os.path.exists(ARQ_PEDIDOS):
         pedidos = pd.DataFrame(columns=[
-            "pedido", "data", "vendedor", "cliente", "codigo", "produto", "un",
-            "quantidade", "preco", "desconto", "subtotal", "total", "status"
+            "pedido", "data", "vendedor", "cliente", "codigo", "produto",
+            "un", "quantidade", "preco", "desconto", "subtotal", "total", "status"
         ])
         pedidos.to_excel(ARQ_PEDIDOS, index=False)
 
@@ -102,30 +95,18 @@ def numero_pedido():
     if len(pedidos) == 0 or "pedido" not in pedidos.columns:
         return 1
 
-    maior = pd.to_numeric(pedidos["pedido"], errors="coerce").max()
-
-    if pd.isna(maior):
+    try:
+        maior = pd.to_numeric(pedidos["pedido"], errors="coerce").max()
+        if pd.isna(maior):
+            return 1
+        return int(maior) + 1
+    except Exception:
         return 1
 
-    return int(maior) + 1
 
-
-def resumo_pedidos(pedidos):
-    if len(pedidos) == 0 or "pedido" not in pedidos.columns:
-        return pd.DataFrame(columns=["pedido", "data", "vendedor", "cliente", "total", "status"])
-
-    return pedidos.groupby("pedido", as_index=False).agg({
-        "data": "first",
-        "vendedor": "first",
-        "cliente": "first",
-        "total": "sum",
-        "status": "first",
-    })
-
-
-# =========================================================
-# CSS / LAYOUT
-# =========================================================
+# =========================
+# ESTILO
+# =========================
 
 def css():
     st.markdown("""
@@ -135,827 +116,417 @@ def css():
     }
 
     [data-testid="stAppViewContainer"] {
-        background:#f3f4f6 !important;
+        background: #f4f5f7 !important;
     }
 
     .block-container {
-        max-width:1024px !important;
-        padding:0 0 115px 0 !important;
+        max-width: 980px !important;
+        padding: 0 0 115px 0 !important;
     }
 
     * {
         font-family: Arial, sans-serif;
-        box-sizing:border-box;
     }
 
-    h1, h2, h3, p, label, span, div {
-        color:#111827;
+    .topo {
+        background: linear-gradient(180deg, #111 0%, #191919 100%);
+        padding: 24px 28px 0 28px;
+        border-radius: 0 0 36px 36px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,.25);
     }
 
-    /* =========================
-       LOGIN
-    ========================= */
-
-    .login-wrap {
-        min-height:78vh;
-        display:flex;
-        flex-direction:column;
-        justify-content:center;
-        align-items:center;
-        padding:22px;
-    }
-
-    .login-logo {
-        text-align:center;
-        margin-bottom:34px;
-    }
-
-    .login-logo .tiger {
-        font-size:70px;
-        line-height:1;
-        margin-bottom:12px;
-    }
-
-    .login-logo .name {
-        font-size:54px;
-        font-weight:1000;
-        letter-spacing:2px;
-        color:#111827;
-    }
-
-    .login-logo .sub {
-        font-size:21px;
-        color:#ff8500;
-        letter-spacing:10px;
-        font-weight:1000;
-        margin-top:12px;
-    }
-
-    .login-box {
-        width:100%;
-        max-width:440px;
-    }
-
-    .login-box label {
-        color:#111827 !important;
-        font-weight:900 !important;
-        font-size:15px !important;
-    }
-
-    .login-box input {
-        background:white !important;
-        border:2px solid #d1d5db !important;
-        color:#111827 !important;
-        height:56px !important;
-        border-radius:18px !important;
-        font-size:18px !important;
-        font-weight:800 !important;
-    }
-
-    /* =========================
-       TOPO
-    ========================= */
-
-    .topbar {
-        background:#111;
-        min-height:126px;
-        padding:18px 40px;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        box-shadow:0 6px 22px rgba(0,0,0,.28);
+    .topo-linha {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        color: white;
     }
 
     .hamb {
-        color:#ff8500 !important;
-        font-size:40px;
-        font-weight:1000;
-        line-height:1;
+        color: #ff8500;
+        font-size: 34px;
+        font-weight: 900;
     }
 
-    .brand {
-        display:flex;
-        align-items:center;
-        gap:14px;
-        color:white !important;
+    .logo {
+        text-align: center;
+        color: white;
+        font-size: 34px;
+        font-weight: 1000;
+        letter-spacing: 1px;
     }
 
-    .brand-icon {
-        width:68px;
-        height:68px;
-        border:2px solid #fff;
-        border-radius:50%;
-        background:#111;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:42px;
+    .logo small {
+        display: block;
+        color: #ff8500;
+        font-size: 14px;
+        letter-spacing: 7px;
+        margin-top: 2px;
     }
 
-    .brand-name {
-        color:white !important;
-        font-size:42px;
-        font-weight:1000;
-        font-style:italic;
-        letter-spacing:1px;
-        line-height:1;
-    }
-
-    .brand-sub {
-        color:#ff8500 !important;
-        font-size:14px;
-        font-weight:1000;
-        letter-spacing:8px;
-        margin-top:8px;
-    }
-
-    .perfil-pill {
-        color:white !important;
-        border:3px solid #ff8500;
-        border-radius:35px;
-        padding:12px 18px;
-        font-size:18px;
-        font-weight:1000;
-        display:flex;
-        align-items:center;
-        gap:8px;
+    .perfil {
+        border: 3px solid #ff8500;
+        border-radius: 28px;
+        color: white;
+        padding: 10px 16px;
+        font-weight: 900;
+        font-size: 16px;
     }
 
     .hero {
-        background:linear-gradient(135deg,#ff8500,#ff9d1c);
-        padding:40px 40px 96px 40px;
-        position:relative;
-        overflow:hidden;
+        margin: 22px -28px 0 -28px;
+        padding: 42px 38px 96px 38px;
+        background: linear-gradient(135deg, #ff8500, #ff9d1c);
+        position: relative;
+        overflow: hidden;
     }
 
-    .hero::after {
-        content:"🐯";
-        position:absolute;
-        right:62px;
-        top:0px;
-        font-size:185px;
-        opacity:.14;
+    .hero:after {
+        content: "🐯";
+        position: absolute;
+        right: 25px;
+        top: 12px;
+        font-size: 180px;
+        opacity: .14;
     }
 
     .hero h1 {
-        margin:0;
-        color:#111827 !important;
-        font-size:46px;
-        font-weight:1000;
-        position:relative;
-        z-index:2;
+        margin: 0;
+        color: #111;
+        font-size: 46px;
+        font-weight: 1000;
     }
 
     .hero p {
-        color:#111827 !important;
-        margin:12px 0 0 0;
-        font-size:23px;
-        font-weight:600;
-        position:relative;
-        z-index:2;
+        color: #111;
+        font-size: 22px;
+        margin: 12px 0 0 0;
+        font-weight: 600;
     }
 
     .conteudo {
-        padding:0 28px;
-        margin-top:-68px;
-        position:relative;
-        z-index:10;
+        padding: 0 26px;
+        margin-top: -64px;
+        position: relative;
+        z-index: 5;
     }
-
-    .conteudo-normal {
-        padding:32px 28px 0 28px;
-        position:relative;
-        z-index:10;
-    }
-
-    /* =========================
-       CARDS
-    ========================= */
 
     .cards {
-        display:grid;
-        grid-template-columns:repeat(3,1fr);
-        gap:16px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
     }
 
-    .metric-card {
-        background:white;
-        border-radius:24px;
-        min-height:190px;
-        padding:26px 16px;
-        text-align:center;
-        box-shadow:0 8px 24px rgba(15,23,42,.13);
+    .card-metrica {
+        background: white;
+        border-radius: 24px;
+        padding: 24px 16px;
+        text-align: center;
+        box-shadow: 0 8px 24px rgba(15,23,42,.12);
+        min-height: 190px;
     }
 
-    .metric-icon {
-        width:78px;
-        height:78px;
-        background:#111;
-        border-radius:20px;
-        color:#ff8500 !important;
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        font-size:40px;
-        margin-bottom:14px;
+    .icone {
+        width: 78px;
+        height: 78px;
+        background: #111;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ff8500;
+        font-size: 40px;
+        margin-bottom: 14px;
     }
 
-    .metric-title {
-        color:#777 !important;
-        font-size:17px;
-        font-weight:1000;
+    .card-metrica .titulo {
+        color: #777;
+        font-size: 17px;
+        font-weight: 900;
     }
 
-    .metric-value {
-        color:#111827 !important;
-        font-size:30px;
-        font-weight:1000;
-        margin-top:12px;
+    .card-metrica .valor {
+        color: #111;
+        font-size: 30px;
+        font-weight: 1000;
+        margin-top: 12px;
     }
 
-    .metric-sub {
-        color:#ff8500 !important;
-        font-size:16px;
-        font-weight:900;
-        margin-top:12px;
+    .card-metrica .sub {
+        color: #ff8500;
+        font-size: 16px;
+        font-weight: 900;
+        margin-top: 12px;
     }
 
-    .section-title {
-        margin-top:34px;
-        color:#111827 !important;
-        font-size:32px;
-        font-weight:1000;
-        display:flex;
-        align-items:center;
-        gap:12px;
+    .secao {
+        margin-top: 34px;
+        color: #111;
+        font-size: 30px;
+        font-weight: 1000;
     }
 
-    .section-line {
-        width:80px;
-        height:5px;
-        border-radius:10px;
-        background:#ff8500;
-        margin:12px 0 24px 0;
+    .linha-laranja {
+        width: 56px;
+        height: 4px;
+        background: #ff8500;
+        border-radius: 8px;
+        margin-top: 8px;
+        margin-bottom: 14px;
     }
 
     .box {
-        background:white;
-        border-radius:24px;
-        padding:22px;
-        box-shadow:0 8px 24px rgba(15,23,42,.10);
-        margin-bottom:18px;
-        color:#111827 !important;
+        background: white;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 8px 24px rgba(15,23,42,.10);
+        margin-bottom: 18px;
     }
 
-    .box * {
-        color:#111827 !important;
+    .tabela-box {
+        background: white;
+        border-radius: 22px;
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(15,23,42,.10);
+        overflow-x: auto;
     }
 
-    /* =========================
-       TABELA DASHBOARD
-    ========================= */
-
-    .orders-table {
-        background:white;
-        border-radius:24px;
-        padding:18px;
-        box-shadow:0 8px 24px rgba(15,23,42,.10);
-        overflow-x:auto;
+    .linha-pedido {
+        display: grid;
+        grid-template-columns: 70px 1.4fr 1.7fr 1fr 120px;
+        gap: 10px;
+        align-items: center;
+        padding: 15px 8px;
+        border-bottom: 1px solid #eee;
+        font-size: 15px;
     }
 
-    .order-row {
-        display:grid;
-        grid-template-columns:90px 1.5fr 1.3fr 1.4fr 1fr;
-        gap:12px;
-        align-items:center;
-        padding:16px 14px;
-        border-bottom:1px solid #eee;
-        font-size:16px;
+    .cabecalho {
+        background: #111;
+        color: #ff8500;
+        border-radius: 14px 14px 0 0;
+        font-weight: 1000;
     }
 
-    .order-head {
-        background:#111;
-        color:#ff8500 !important;
-        border-radius:16px 16px 0 0;
-        font-weight:1000;
-    }
-
-    .order-head div {
-        color:#ff8500 !important;
-    }
-
-    .money-orange {
-        color:#ff8500 !important;
-        font-weight:1000;
+    .valor-laranja {
+        color: #ff8500;
+        font-weight: 1000;
     }
 
     .status-pendente {
-        background:#fff0bd;
-        color:#9a6500 !important;
-        padding:8px 10px;
-        border-radius:10px;
-        font-size:13px;
-        font-weight:1000;
-        text-align:center;
+        background: #fff0bd;
+        color: #b07600;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-weight: 900;
+        text-align: center;
+        font-size: 13px;
     }
 
     .status-faturado {
-        background:#d8f7d1;
-        color:#118022 !important;
-        padding:8px 10px;
-        border-radius:10px;
-        font-size:13px;
-        font-weight:1000;
-        text-align:center;
+        background: #d8f7d1;
+        color: #118022;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-weight: 900;
+        text-align: center;
+        font-size: 13px;
     }
 
-    /* =========================
-       NOVO PEDIDO
-    ========================= */
-
-    .form-card {
-        background:white;
-        border-radius:24px;
-        padding:22px;
-        box-shadow:0 8px 24px rgba(15,23,42,.10);
-        margin-bottom:22px;
+    .produto-card {
+        border: 2px solid #ff8500;
+        border-radius: 18px;
+        padding: 14px;
+        margin: 12px 0;
+        background: white;
+        font-weight: 800;
     }
 
-    .produto-preview {
-        background:white;
-        border:2px solid #ff8500;
-        border-radius:18px;
-        padding:14px;
-        margin:14px 0;
-        font-weight:800;
-    }
-
-    .produto-preview b {
-        color:#0b8de3 !important;
+    .produto-card b {
+        color: #0b8de3;
     }
 
     .total-item {
-        background:#0b8de3;
-        border-radius:22px;
-        padding:18px;
-        text-align:center;
-        margin:16px 0;
+        background: #0b8de3;
+        color: white;
+        border-radius: 22px;
+        padding: 18px;
+        text-align: center;
+        margin: 14px 0;
     }
 
-    .total-item * {
-        color:white !important;
+    .total-item .label {
+        font-size: 13px;
+        font-weight: 900;
+        color: white;
     }
 
-    .total-label {
-        font-size:13px;
-        font-weight:1000;
-    }
-
-    .total-value {
-        font-size:36px;
-        font-weight:1000;
-        margin-top:8px;
-    }
-
-    /* =========================
-       CARRINHO
-    ========================= */
-
-    .cart-client {
-        background:white;
-        border-radius:20px;
-        padding:16px 22px;
-        box-shadow:0 8px 22px rgba(15,23,42,.10);
-        margin-bottom:20px;
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        font-size:23px;
-        font-weight:800;
-    }
-
-    .cart-client b {
-        color:#ff8500 !important;
-        font-weight:1000;
-    }
-
-    .cart-panel {
-        background:white;
-        border-radius:24px;
-        padding:24px 28px;
-        box-shadow:0 8px 24px rgba(15,23,42,.13);
-        margin-bottom:22px;
-    }
-
-    .cart-item {
-        display:grid;
-        grid-template-columns:135px 1fr;
-        gap:22px;
-        padding:18px 0;
-        border-bottom:1px solid #e5e7eb;
-    }
-
-    .cart-item:last-child {
-        border-bottom:none;
-    }
-
-    .cart-left {
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        gap:14px;
-    }
-
-    .product-img {
-        width:95px;
-        height:75px;
-        border-radius:14px;
-        background:#f3f4f6;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:52px;
-        overflow:hidden;
-    }
-
-    .trash-red {
-        width:60px;
-        height:60px;
-        border-radius:16px;
-        background:linear-gradient(135deg,#ff3434,#df1f1f);
-        color:white !important;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:30px;
-        box-shadow:0 6px 14px rgba(239,68,68,.30);
-    }
-
-    .cart-name {
-        color:#111827 !important;
-        font-size:24px;
-        font-weight:1000;
-        line-height:1.15;
-        margin-top:4px;
-    }
-
-    .cart-code {
-        color:#6b7280 !important;
-        font-size:19px;
-        font-weight:700;
-        margin-top:12px;
-    }
-
-    .cart-grid {
-        display:grid;
-        grid-template-columns:1fr 1fr 1fr;
-        gap:18px;
-        align-items:center;
-        margin-top:26px;
-    }
-
-    .cart-label {
-        color:#111827 !important;
-        font-size:18px;
-        font-weight:700;
-        margin-bottom:10px;
-    }
-
-    .qty-box {
-        display:flex;
-        align-items:center;
-        gap:18px;
-    }
-
-    .qty-btn {
-        width:58px;
-        height:58px;
-        border-radius:14px;
-        background:#f0f2f5;
-        color:#2b7de9 !important;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:33px;
-        font-weight:1000;
-    }
-
-    .qty-num {
-        min-width:35px;
-        text-align:center;
-        color:#111827 !important;
-        font-size:29px;
-        font-weight:1000;
-    }
-
-    .cart-price {
-        color:#111827 !important;
-        font-size:26px;
-        font-weight:1000;
-    }
-
-    .cart-total {
-        color:#ff8500 !important;
-        font-size:31px;
-        font-weight:1000;
+    .total-item .valor {
+        font-size: 34px;
+        font-weight: 1000;
+        margin-top: 8px;
+        color: white;
     }
 
     .resumo {
-        background:linear-gradient(135deg,#111827,#10131a);
-        border-radius:24px;
-        padding:28px;
-        box-shadow:0 8px 24px rgba(15,23,42,.16);
-        margin-bottom:24px;
+        background: #111827;
+        color: white;
+        border-radius: 22px;
+        padding: 18px;
+        margin-top: 16px;
     }
 
-    .resumo-row {
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        margin-bottom:20px;
-        font-size:28px;
-        font-weight:1000;
+    .resumo * {
+        color: white !important;
     }
 
-    .resumo-row span {
-        color:white !important;
+    .resumo-linha {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 900;
+        margin-bottom: 10px;
     }
 
-    .resumo-row .orange-total {
-        color:#ff8500 !important;
+    .resumo-total {
+        border-top: 1px solid rgba(255,255,255,.25);
+        padding-top: 12px;
+        font-size: 22px;
     }
-
-    .resumo-line {
-        height:1px;
-        background:rgba(255,255,255,.22);
-        margin:18px 0 24px 0;
-    }
-
-    .resumo-final {
-        font-size:42px;
-    }
-
-    .btn-finalizar {
-        background:linear-gradient(135deg,#2f8fe9,#2380d8);
-        border-radius:18px;
-        padding:22px;
-        text-align:center;
-        color:white !important;
-        font-size:28px;
-        font-weight:1000;
-        margin-bottom:28px;
-        box-shadow:0 7px 18px rgba(47,143,233,.28);
-    }
-
-    /* =========================
-       BOTTOM NAV
-    ========================= */
 
     .bottom-space {
-        height:110px;
+        height: 95px;
     }
 
     .bottom-nav {
-        position:fixed;
-        left:50%;
-        bottom:0;
-        transform:translateX(-50%);
-        width:100%;
-        max-width:1024px;
-        background:#111;
-        border-radius:28px 28px 0 0;
-        padding:10px 18px 14px 18px;
-        z-index:99999;
-        box-shadow:0 -8px 24px rgba(0,0,0,.30);
+        position: fixed;
+        left: 50%;
+        bottom: 0;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 980px;
+        background: #111;
+        border-radius: 28px 28px 0 0;
+        padding: 10px 18px 14px 18px;
+        z-index: 99999;
+        box-shadow: 0 -8px 24px rgba(0,0,0,.28);
     }
 
     .stButton > button {
-        border-radius:16px !important;
-        min-height:48px !important;
-        font-weight:900 !important;
-        border:none !important;
-        background:#0b8de3 !important;
-        color:white !important;
+        border-radius: 16px !important;
+        min-height: 46px !important;
+        font-weight: 900 !important;
+        border: none !important;
+        background: #0b8de3 !important;
+        color: white !important;
     }
 
     .bottom-nav .stButton > button {
-        background:transparent !important;
-        color:white !important;
-        box-shadow:none !important;
-        font-size:13px !important;
-        padding:4px !important;
-    }
-
-    label {
-        color:#111827 !important;
-        font-weight:900 !important;
+        background: transparent !important;
+        color: white !important;
+        box-shadow: none !important;
+        font-size: 13px !important;
+        padding: 4px !important;
     }
 
     input, textarea {
-        background:white !important;
-        color:#111827 !important;
-        border-radius:16px !important;
-        min-height:50px !important;
-        font-weight:800 !important;
+        border-radius: 16px !important;
+        min-height: 48px !important;
+        font-weight: 800 !important;
     }
 
     div[data-baseweb="select"] > div {
-        background:white !important;
-        color:#111827 !important;
-        border-radius:16px !important;
-        min-height:50px !important;
+        border-radius: 16px !important;
+        min-height: 48px !important;
     }
 
     div[data-baseweb="popover"] {
-        z-index:9999999 !important;
+        z-index: 9999999 !important;
     }
 
     div[data-baseweb="popover"] * {
-        background:white !important;
-        color:#111827 !important;
+        background: white !important;
+        color: #111827 !important;
     }
 
     ul[role="listbox"] {
-        background:white !important;
+        background: white !important;
     }
 
     li[role="option"] {
-        background:white !important;
-        color:#111827 !important;
-        font-weight:800 !important;
+        background: white !important;
+        color: #111827 !important;
+        font-weight: 800 !important;
     }
 
-    @media(max-width:720px) {
+    @media(max-width: 720px) {
         .block-container {
-            max-width:100% !important;
+            max-width: 100% !important;
         }
 
-        .topbar {
-            min-height:105px;
-            padding:16px 24px;
+        .topo {
+            border-radius: 0 0 30px 30px;
+            padding: 20px 18px 0 18px;
         }
 
-        .hamb {
-            font-size:34px;
+        .logo {
+            font-size: 24px;
         }
 
-        .brand {
-            gap:8px;
+        .logo small {
+            font-size: 10px;
+            letter-spacing: 5px;
         }
 
-        .brand-icon {
-            width:48px;
-            height:48px;
-            font-size:30px;
-        }
-
-        .brand-name {
-            font-size:31px;
-        }
-
-        .brand-sub {
-            font-size:11px;
-            letter-spacing:5px;
-            margin-top:5px;
-        }
-
-        .perfil-pill {
-            font-size:13px;
-            padding:8px 12px;
+        .perfil {
+            font-size: 13px;
+            padding: 8px 10px;
         }
 
         .hero {
-            padding:34px 32px 88px 32px;
+            padding: 34px 26px 86px 26px;
         }
 
         .hero h1 {
-            font-size:38px;
+            font-size: 36px;
         }
 
         .hero p {
-            font-size:18px;
-        }
-
-        .hero::after {
-            right:15px;
-            font-size:145px;
+            font-size: 18px;
         }
 
         .conteudo {
-            padding:0 18px;
-            margin-top:-62px;
-        }
-
-        .conteudo-normal {
-            padding:28px 18px 0 18px;
+            padding: 0 18px;
         }
 
         .cards {
-            grid-template-columns:1fr;
+            grid-template-columns: 1fr;
         }
 
-        .metric-card {
-            min-height:145px;
+        .card-metrica {
+            min-height: 140px;
         }
 
-        .order-row {
-            grid-template-columns:60px 1.2fr 1.2fr 1fr;
-            font-size:13px;
+        .linha-pedido {
+            grid-template-columns: 58px 1.2fr 1.4fr 1fr;
+            font-size: 13px;
         }
 
-        .order-row div:nth-child(2) {
+        .linha-pedido div:nth-child(2) {
             display:none;
         }
 
-        .section-title {
-            font-size:34px;
-        }
-
-        .cart-client {
-            font-size:18px;
-            padding:14px 16px;
-        }
-
-        .cart-panel {
-            padding:18px 16px;
-        }
-
-        .cart-item {
-            grid-template-columns:82px 1fr;
-            gap:14px;
-            padding:18px 0;
-        }
-
-        .product-img {
-            width:70px;
-            height:58px;
-            font-size:38px;
-        }
-
-        .trash-red {
-            width:52px;
-            height:52px;
-            font-size:25px;
-        }
-
-        .cart-name {
-            font-size:21px;
-        }
-
-        .cart-code {
-            font-size:16px;
-        }
-
-        .cart-grid {
-            grid-template-columns:1fr;
-            gap:12px;
-            margin-top:20px;
-        }
-
-        .cart-label {
-            font-size:15px;
-            margin-bottom:8px;
-        }
-
-        .qty-btn {
-            width:46px;
-            height:46px;
-            font-size:28px;
-        }
-
-        .qty-num {
-            font-size:25px;
-        }
-
-        .cart-price {
-            font-size:24px;
-        }
-
-        .cart-total {
-            font-size:27px;
-        }
-
-        .resumo-row {
-            font-size:24px;
-        }
-
-        .resumo-final {
-            font-size:35px;
-        }
-
-        .btn-finalizar {
-            font-size:24px;
-            padding:20px;
+        .secao {
+            font-size: 28px;
         }
     }
     </style>
     """, unsafe_allow_html=True)
 
 
-# =========================================================
+# =========================
 # LOGIN
-# =========================================================
+# =========================
 
 def login():
     if "logado" not in st.session_state:
@@ -964,21 +535,24 @@ def login():
     if st.session_state.logado:
         return
 
+    st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("""
-    <div class="login-wrap">
-        <div class="login-logo">
-            <div class="tiger">🐯</div>
-            <div class="name">TIGRÃO</div>
-            <div class="sub">DISTRIBUIDORA</div>
-        </div>
-        <div class="login-box">
+    <div style="text-align:center;">
+        <div style="font-size:60px;">🐯</div>
+        <h1 style="margin-bottom:0;">TIGRÃO</h1>
+        <p style="color:#ff8500;font-weight:900;letter-spacing:5px;">DISTRIBUIDORA</p>
+    </div>
     """, unsafe_allow_html=True)
 
-    usuario = st.text_input("Usuário", key="login_usuario")
-    senha = st.text_input("Senha", type="password", key="login_senha")
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
 
     if st.button("ENTRAR", use_container_width=True):
         usuarios = ler_excel(ARQ_USUARIOS)
+
+        if len(usuarios) == 0:
+            st.error("Base de usuários não encontrada.")
+            st.stop()
 
         usuarios["usuario"] = usuarios["usuario"].astype(str).str.strip().str.lower()
         usuarios["senha"] = usuarios["senha"].astype(str).str.strip()
@@ -1005,53 +579,41 @@ def login():
             st.session_state.form_key = 0
             st.rerun()
 
-    st.markdown("""
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
     st.stop()
 
 
-# =========================================================
+# =========================
 # UI
-# =========================================================
+# =========================
 
-def topo(titulo=None, subtitulo=None, mostrar_hero=True):
+def topo(titulo, subtitulo):
     perfil = st.session_state.get("perfil", "VENDEDOR")
 
     st.markdown(f"""
-    <div class="topbar">
-        <div class="hamb">☰</div>
-
-        <div class="brand">
-            <div class="brand-icon">🐯</div>
-            <div>
-                <div class="brand-name">TIGRÃO</div>
-                <div class="brand-sub">DISTRIBUIDORA</div>
+    <div class="topo">
+        <div class="topo-linha">
+            <div class="hamb">☰</div>
+            <div class="logo">
+                🐯 TIGRÃO
+                <small>DISTRIBUIDORA</small>
             </div>
+            <div class="perfil">👤 {perfil}</div>
         </div>
 
-        <div class="perfil-pill">👤 {perfil}</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if mostrar_hero:
-        st.markdown(f"""
         <div class="hero">
             <h1>{titulo}</h1>
             <p>{subtitulo}</p>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
 
-def abrir(sobrepor=True):
-    classe = "conteudo" if sobrepor else "conteudo-normal"
-    st.markdown(f'<div class="{classe}">', unsafe_allow_html=True)
+def abrir():
+    st.markdown('<div class="conteudo">', unsafe_allow_html=True)
 
 
 def fechar():
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def mudar_menu(nome):
@@ -1063,8 +625,8 @@ def menu_inferior():
     st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
 
     itens = [
-        ("Dashboard", "📊 Dashboard"),
-        ("Novo Pedido", "🛒 Novo Pedido"),
+        ("Dashboard", "🏠 Dashboard"),
+        ("Novo Pedido", "🛒 Novo"),
         ("Pedidos", "📋 Pedidos"),
         ("Comissão", "💰 Comissão"),
         ("Mais", "⋯ Mais"),
@@ -1080,27 +642,30 @@ def menu_inferior():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def produto_emoji(nome):
-    nome = str(nome).upper()
-
-    if "BANAN" in nome or "DOCE" in nome:
-        return "🍯"
-    if "HALLS" in nome or "MENTA" in nome or "BALAS" in nome:
-        return "🍬"
-    if "PROPOLIS" in nome or "SPRAY" in nome:
-        return "🍶"
-    if "CHA" in nome or "CHÁ" in nome:
-        return "🍵"
-    return "📦"
-
-
-# =========================================================
+# =========================
 # TELAS
-# =========================================================
+# =========================
+
+def resumo_pedidos(pedidos):
+    colunas = ["pedido", "data", "vendedor", "cliente", "total", "status"]
+
+    if len(pedidos) == 0 or "pedido" not in pedidos.columns:
+        return pd.DataFrame(columns=colunas)
+
+    agrupado = pedidos.groupby("pedido", as_index=False).agg({
+        "data": "first",
+        "vendedor": "first",
+        "cliente": "first",
+        "total": "sum",
+        "status": "first",
+    })
+
+    return agrupado
+
 
 def dashboard():
-    topo("Dashboard", "Visão geral da operação", mostrar_hero=True)
-    abrir(sobrepor=True)
+    topo("Dashboard", "Visão geral da operação")
+    abrir()
 
     pedidos = ler_excel(ARQ_PEDIDOS)
     vendedor = st.session_state.get("nome", "")
@@ -1117,41 +682,41 @@ def dashboard():
 
     st.markdown(f"""
     <div class="cards">
-        <div class="metric-card">
-            <div class="metric-icon">📋</div>
-            <div class="metric-title">PEDIDOS</div>
-            <div class="metric-value">{total_pedidos}</div>
-            <div class="metric-sub">Total de pedidos</div>
+        <div class="card-metrica">
+            <div class="icone">📋</div>
+            <div class="titulo">PEDIDOS</div>
+            <div class="valor">{total_pedidos}</div>
+            <div class="sub">Total de pedidos</div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon">💲</div>
-            <div class="metric-title">VENDAS</div>
-            <div class="metric-value">{dinheiro(total_vendas)}</div>
-            <div class="metric-sub">Valor total de vendas</div>
+        <div class="card-metrica">
+            <div class="icone">💲</div>
+            <div class="titulo">VENDAS</div>
+            <div class="valor">{dinheiro(total_vendas)}</div>
+            <div class="sub">Valor total de vendas</div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon">%</div>
-            <div class="metric-title">COMISSÃO 7%</div>
-            <div class="metric-value">{dinheiro(total_comissao)}</div>
-            <div class="metric-sub">Valor da comissão</div>
+        <div class="card-metrica">
+            <div class="icone">%</div>
+            <div class="titulo">COMISSÃO 7%</div>
+            <div class="valor">{dinheiro(total_comissao)}</div>
+            <div class="sub">Valor da comissão</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">🕘 Últimos pedidos</div><div class="section-line"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="secao">🕘 Últimos pedidos</div><div class="linha-laranja"></div>', unsafe_allow_html=True)
 
     resumo = resumo_pedidos(pedidos_view).tail(6).sort_values("pedido", ascending=False)
 
-    st.markdown('<div class="orders-table">', unsafe_allow_html=True)
+    st.markdown('<div class="tabela-box">', unsafe_allow_html=True)
     st.markdown("""
-    <div class="order-row order-head">
+    <div class="linha-pedido cabecalho">
         <div>PEDIDO</div>
         <div>DATA</div>
-        <div>VENDEDOR</div>
         <div>CLIENTE</div>
         <div>TOTAL</div>
+        <div>STATUS</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1159,23 +724,27 @@ def dashboard():
         st.info("Nenhum pedido lançado.")
     else:
         for _, row in resumo.iterrows():
+            status = str(row["status"]).upper()
+            classe = "status-faturado" if status == "FATURADO" else "status-pendente"
+
             st.markdown(f"""
-            <div class="order-row">
+            <div class="linha-pedido">
                 <div>{row["pedido"]}</div>
                 <div>{row["data"]}</div>
-                <div>{row["vendedor"]}</div>
                 <div>{row["cliente"]}</div>
-                <div class="money-orange">{dinheiro(row["total"])}</div>
+                <div class="valor-laranja">{dinheiro(row["total"])}</div>
+                <div><span class="{classe}">{status}</span></div>
             </div>
             """, unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
     fechar()
 
 
 def novo_pedido():
-    topo("Novo Pedido", "Lançamento rápido de pedidos", mostrar_hero=True)
-    abrir(sobrepor=True)
+    topo("Novo Pedido", "Lançamento rápido de pedidos")
+    abrir()
 
     clientes = ler_excel(ARQ_CLIENTES)
     produtos = ler_excel(ARQ_PRODUTOS)
@@ -1186,26 +755,28 @@ def novo_pedido():
     if "form_key" not in st.session_state:
         st.session_state.form_key = 0
 
-    st.markdown('<div class="form-card">', unsafe_allow_html=True)
+    st.markdown('<div class="box">', unsafe_allow_html=True)
 
     lista_clientes = clientes["cliente"].astype(str).tolist() if len(clientes) else ["CLIENTE PADRÃO"]
 
-    cliente = st.selectbox("Cliente", lista_clientes, key="cliente_pedido")
+    cliente = st.selectbox(
+        "Cliente",
+        lista_clientes,
+        key="cliente_pedido"
+    )
 
     fornecedores = ["Todos"]
 
     if len(produtos) and "fornecedor" in produtos.columns:
         fornecedores += sorted(
-            produtos["fornecedor"]
-            .fillna("")
-            .astype(str)
-            .replace("", pd.NA)
-            .dropna()
-            .unique()
-            .tolist()
+            produtos["fornecedor"].fillna("").astype(str).replace("", pd.NA).dropna().unique().tolist()
         )
 
-    fornecedor = st.selectbox("Fornecedor", fornecedores, key="fornecedor_pedido")
+    fornecedor = st.selectbox(
+        "Fornecedor",
+        fornecedores,
+        key="fornecedor_pedido"
+    )
 
     if fornecedor != "Todos":
         produtos_filtrados = produtos[produtos["fornecedor"].astype(str) == fornecedor].copy()
@@ -1233,7 +804,7 @@ def novo_pedido():
 
     if produto:
         st.markdown(f"""
-        <div class="produto-preview">
+        <div class="produto-card">
             <b>{produto["produto"]}</b><br>
             Código: {produto["codigo"]}<br>
             Fornecedor: {produto["fornecedor"]}<br>
@@ -1263,8 +834,8 @@ def novo_pedido():
 
     st.markdown(f"""
     <div class="total-item">
-        <div class="total-label">TOTAL DO ITEM</div>
-        <div class="total-value">{dinheiro(total)}</div>
+        <div class="label">TOTAL DO ITEM</div>
+        <div class="valor">{dinheiro(total)}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1287,7 +858,7 @@ def novo_pedido():
 
             st.session_state.form_key += 1
             st.success("Produto adicionado.")
-            time.sleep(0.25)
+            time.sleep(0.3)
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1297,80 +868,63 @@ def novo_pedido():
 
 
 def carrinho(cliente):
-    st.markdown('<div class="section-title">📦 Carrinho</div><div class="section-line"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="secao">📦 Carrinho</div><div class="linha-laranja"></div>', unsafe_allow_html=True)
 
     if len(st.session_state.carrinho) == 0:
         st.info("Nenhum produto adicionado.")
         return
 
-    st.markdown(f"""
-    <div class="cart-client">
-        <div>👤 Cliente: <b>{cliente}</b></div>
-        <div>⌄</div>
+    st.markdown('<div class="tabela-box">', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="linha-pedido cabecalho" style="grid-template-columns:40px 1.8fr 70px 90px 90px;">
+        <div>🗑</div>
+        <div>PRODUTO</div>
+        <div>QTD</div>
+        <div>UNIT.</div>
+        <div>TOTAL</div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="cart-panel">', unsafe_allow_html=True)
-
     for i, item in enumerate(st.session_state.carrinho):
-        nome = item["produto"]
-        codigo = item["codigo"]
-        qtd = int(item["quantidade"])
-        preco = float(item["preco"])
-        total = float(item["total"])
-        emoji = produto_emoji(nome)
+        col1, col2, col3, col4, col5 = st.columns([0.4, 2.4, 0.7, 1, 1])
 
-        st.markdown(f"""
-        <div class="cart-item">
-            <div class="cart-left">
-                <div class="product-img">{emoji}</div>
-                <div class="trash-red">🗑</div>
-            </div>
+        with col1:
+            if st.button("🗑", key=f"del_{i}"):
+                st.session_state.carrinho.pop(i)
+                st.rerun()
 
-            <div>
-                <div class="cart-name">{nome}</div>
-                <div class="cart-code">Cód: {codigo}</div>
+        with col2:
+            st.markdown(
+                f"**{item['produto']}**  \n<small>Cód: {item['codigo']}</small>",
+                unsafe_allow_html=True
+            )
 
-                <div class="cart-grid">
-                    <div>
-                        <div class="cart-label">Quantidade</div>
-                        <div class="qty-box">
-                            <div class="qty-btn">−</div>
-                            <div class="qty-num">{qtd}</div>
-                            <div class="qty-btn">+</div>
-                        </div>
-                    </div>
+        with col3:
+            st.write(int(item["quantidade"]))
 
-                    <div>
-                        <div class="cart-label">Preço unit.</div>
-                        <div class="cart-price">{dinheiro(preco)}</div>
-                    </div>
+        with col4:
+            st.write(dinheiro(item["preco"]))
 
-                    <div>
-                        <div class="cart-label">Total</div>
-                        <div class="cart-total">{dinheiro(total)}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        with col5:
+            st.markdown(
+                f"<b style='color:#ff8500'>{dinheiro(item['total'])}</b>",
+                unsafe_allow_html=True
+            )
 
-        if st.button(f"Remover {nome}", key=f"remover_{i}", use_container_width=True):
-            st.session_state.carrinho.pop(i)
-            st.rerun()
+        st.divider()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    subtotal = sum(float(x["subtotal"]) for x in st.session_state.carrinho)
-    total = sum(float(x["total"]) for x in st.session_state.carrinho)
+    subtotal = sum([x["subtotal"] for x in st.session_state.carrinho])
+    total = sum([x["total"] for x in st.session_state.carrinho])
     desconto = subtotal - total
 
     st.markdown(f"""
     <div class="resumo">
-        <div class="resumo-row"><span>Subtotal</span><span>{dinheiro(subtotal)}</span></div>
-        <div class="resumo-row"><span>Desconto</span><span class="orange-total">{dinheiro(desconto)}</span></div>
-        <div class="resumo-line"></div>
-        <div class="resumo-row resumo-final"><span>Total</span><span class="orange-total">{dinheiro(total)}</span></div>
+        <div class="resumo-linha"><span>Subtotal</span><span>{dinheiro(subtotal)}</span></div>
+        <div class="resumo-linha"><span>Desconto</span><span>{dinheiro(desconto)}</span></div>
+        <div class="resumo-linha resumo-total"><span>Total</span><span>{dinheiro(total)}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1416,8 +970,8 @@ def carrinho(cliente):
 
 
 def pedidos_tela():
-    topo("Pedidos", "Pedidos lançados", mostrar_hero=True)
-    abrir(sobrepor=True)
+    topo("Pedidos", "Pedidos lançados")
+    abrir()
 
     pedidos = ler_excel(ARQ_PEDIDOS)
     vendedor = st.session_state.get("nome", "")
@@ -1441,13 +995,17 @@ def pedidos_tela():
             <b>Pedido #{row["pedido"]}</b><br>
             Cliente: {row["cliente"]}<br>
             Data: {row["data"]}<br>
-            Total: <b style="color:#ff8500!important">{dinheiro(row["total"])}</b><br>
+            Total: <b style="color:#ff8500">{dinheiro(row["total"])}</b><br>
             Status: <b>{status}</b>
         </div>
         """, unsafe_allow_html=True)
 
         if status == "PENDENTE":
-            if st.button(f"✏️ Editar pedido {row['pedido']}", key=f"edit_{row['pedido']}", use_container_width=True):
+            if st.button(
+                f"✏️ Editar pedido {row['pedido']}",
+                key=f"edit_{row['pedido']}",
+                use_container_width=True
+            ):
                 st.session_state.pedido_editando = int(row["pedido"])
                 st.session_state.menu = "Editar Pedido"
                 st.rerun()
@@ -1456,11 +1014,12 @@ def pedidos_tela():
 
 
 def editar_pedido():
-    topo("Editar Pedido", "Alterar pedido pendente", mostrar_hero=True)
-    abrir(sobrepor=True)
+    topo("Editar Pedido", "Alterar pedido pendente")
+    abrir()
 
     numero = st.session_state.get("pedido_editando")
     pedidos = ler_excel(ARQ_PEDIDOS)
+
     dados = pedidos[pedidos["pedido"] == numero].copy()
 
     if len(dados) == 0:
@@ -1538,8 +1097,8 @@ def editar_pedido():
 
 
 def comissao_tela():
-    topo("Comissão", "Resumo da comissão", mostrar_hero=True)
-    abrir(sobrepor=True)
+    topo("Comissão", "Resumo da comissão")
+    abrir()
 
     pedidos = ler_excel(ARQ_PEDIDOS)
     vendedor = st.session_state.get("nome", "")
@@ -1552,25 +1111,25 @@ def comissao_tela():
 
     st.markdown(f"""
     <div class="cards">
-        <div class="metric-card">
-            <div class="metric-icon">💲</div>
-            <div class="metric-title">VENDAS</div>
-            <div class="metric-value">{dinheiro(vendas)}</div>
-            <div class="metric-sub">Total vendido</div>
+        <div class="card-metrica">
+            <div class="icone">💲</div>
+            <div class="titulo">VENDAS</div>
+            <div class="valor">{dinheiro(vendas)}</div>
+            <div class="sub">Total vendido</div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon">%</div>
-            <div class="metric-title">COMISSÃO</div>
-            <div class="metric-value">{dinheiro(comissao)}</div>
-            <div class="metric-sub">Comissão 7%</div>
+        <div class="card-metrica">
+            <div class="icone">%</div>
+            <div class="titulo">COMISSÃO</div>
+            <div class="valor">{dinheiro(comissao)}</div>
+            <div class="sub">Comissão 7%</div>
         </div>
 
-        <div class="metric-card">
-            <div class="metric-icon">🎯</div>
-            <div class="metric-title">META</div>
-            <div class="metric-value">0%</div>
-            <div class="metric-sub">Em breve</div>
+        <div class="card-metrica">
+            <div class="icone">🎯</div>
+            <div class="titulo">META</div>
+            <div class="valor">0%</div>
+            <div class="sub">Em breve</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1579,8 +1138,8 @@ def comissao_tela():
 
 
 def mais_tela():
-    topo("Mais", "Outras opções", mostrar_hero=True)
-    abrir(sobrepor=True)
+    topo("Mais", "Outras opções")
+    abrir()
 
     st.markdown('<div class="box">', unsafe_allow_html=True)
     st.write(f"**Usuário:** {st.session_state.get('nome')}")
@@ -1594,9 +1153,9 @@ def mais_tela():
     fechar()
 
 
-# =========================================================
+# =========================
 # APP
-# =========================================================
+# =========================
 
 criar_banco()
 css()
