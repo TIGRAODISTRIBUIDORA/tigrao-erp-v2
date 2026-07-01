@@ -579,8 +579,6 @@ def login():
             st.session_state.carrinho = []
             st.rerun()
 
-    st.info("Admin: admin / admin123  |  Vendedor: vendedor / 123")
-
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.stop()
