@@ -24,12 +24,14 @@ def aplicar_app_mobile():
     [data-testid="stAppViewContainer"] {
         background: #f2f4f7 !important;
         color: #111827 !important;
+        overflow: visible !important;
     }
 
     .block-container {
         max-width: 430px !important;
         padding: 0 !important;
         margin: auto !important;
+        overflow: visible !important;
     }
 
     * { color: #111827 !important; }
@@ -71,6 +73,61 @@ def aplicar_app_mobile():
         border-radius: 20px;
         box-shadow: 0 5px 18px rgba(0,0,0,.10);
         border: 1px solid #e5e7eb;
+        overflow: visible !important;
+    }
+
+    .pedido-box {
+        overflow: visible !important;
+    }
+
+    .stSelectbox {
+        overflow: visible !important;
+    }
+
+    div[data-baseweb="select"] {
+        overflow: visible !important;
+        z-index: 9999 !important;
+    }
+
+    div[data-baseweb="popover"] {
+        background: white !important;
+        color: #111827 !important;
+        z-index: 999999 !important;
+        position: fixed !important;
+    }
+
+    div[data-baseweb="popover"] * {
+        background: white !important;
+        color: #111827 !important;
+    }
+
+    div[data-baseweb="menu"] {
+        z-index: 999999 !important;
+        max-height: 360px !important;
+        overflow-y: auto !important;
+    }
+
+    ul[role="listbox"] {
+        background: white !important;
+        color: #111827 !important;
+        border-radius: 16px !important;
+        border: 2px solid #cbd5e1 !important;
+        max-height: 360px !important;
+        overflow-y: auto !important;
+    }
+
+    li[role="option"] {
+        background: white !important;
+        color: #111827 !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        padding: 14px !important;
+    }
+
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {
+        background: #fff7ed !important;
+        color: #111827 !important;
     }
 
     .menu-grid {
@@ -110,6 +167,7 @@ def aplicar_app_mobile():
         box-shadow: 0 5px 14px rgba(11,141,227,.28);
         transition: all 0.12s ease-in-out !important;
         cursor: pointer !important;
+        white-space: normal !important;
     }
 
     div.stButton > button:hover {
@@ -161,39 +219,6 @@ def aplicar_app_mobile():
 
     div[data-baseweb="select"] svg {
         fill: #111827 !important;
-        color: #111827 !important;
-    }
-
-    /* CORREÇÃO DA LISTA ABERTA NO CELULAR */
-    div[data-baseweb="popover"] {
-        background: white !important;
-        color: #111827 !important;
-        z-index: 999999 !important;
-    }
-
-    div[data-baseweb="popover"] * {
-        background: white !important;
-        color: #111827 !important;
-    }
-
-    ul[role="listbox"] {
-        background: white !important;
-        color: #111827 !important;
-        border-radius: 16px !important;
-        border: 2px solid #cbd5e1 !important;
-    }
-
-    li[role="option"] {
-        background: white !important;
-        color: #111827 !important;
-        font-size: 16px !important;
-        font-weight: 800 !important;
-        padding: 14px !important;
-    }
-
-    li[role="option"]:hover,
-    li[role="option"][aria-selected="true"] {
-        background: #fff7ed !important;
         color: #111827 !important;
     }
 
