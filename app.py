@@ -18,268 +18,202 @@ st.set_page_config(page_title="Tigrão App", page_icon="🐯", layout="centered"
 def aplicar_app_mobile():
     st.markdown("""
     <style>
-    header, footer { display:none !important; }
-    [data-testid="stSidebar"] { display:none !important; }
+    header, footer { display: none !important; }
+    [data-testid="stSidebar"] { display: none !important; }
 
     [data-testid="stAppViewContainer"] {
-        background:#f4f4f4 !important;
-        color:#111827 !important;
+        background: #f2f4f7 !important;
+        color: #111827 !important;
     }
 
     .block-container {
-        max-width:430px !important;
-        padding:0 0 95px 0 !important;
-        margin:auto !important;
-        overflow:visible !important;
+        max-width: 430px !important;
+        padding: 0 !important;
+        margin: auto !important;
     }
 
-    * {
-        font-family: Arial, sans-serif;
-        color:#111827 !important;
+    * { color: #111827 !important; }
+
+    .app-top, .app-top * { color: white !important; }
+
+    .app-top {
+        background: linear-gradient(180deg, #0b8de3, #0671bb);
+        padding: 18px 18px 14px;
+        border-radius: 0 0 24px 24px;
+        box-shadow: 0 6px 20px rgba(0,0,0,.22);
+        margin-bottom: 14px;
     }
 
-    .tigrao-header {
-        background:#111111;
-        color:white !important;
-        padding:18px 18px 0 18px;
-        border-radius:0 0 28px 28px;
-        overflow:hidden;
-        position:relative;
-        box-shadow:0 8px 24px rgba(0,0,0,.25);
+    .app-top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 900;
+        font-size: 15px;
     }
 
-    .tigrao-header * {
-        color:white !important;
+    .app-title {
+        margin-top: 18px;
+        font-size: 24px;
+        font-weight: 900;
     }
 
-    .header-row {
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        margin-bottom:14px;
-    }
-
-    .hamburger {
-        color:#f97316 !important;
-        font-size:28px;
-        font-weight:1000;
-    }
-
-    .logo-area {
-        text-align:center;
-        font-weight:1000;
-        font-size:27px;
-        letter-spacing:1px;
-        line-height:1;
-    }
-
-    .logo-sub {
-        color:#f97316 !important;
-        font-size:10px;
-        letter-spacing:6px;
-        margin-top:4px;
-    }
-
-    .admin-pill {
-        border:2px solid #f97316;
-        border-radius:24px;
-        padding:7px 10px;
-        font-size:13px;
-        font-weight:1000;
-        display:flex;
-        gap:5px;
-        align-items:center;
-    }
-
-    .orange-hero {
-        background:linear-gradient(135deg,#ff8a00,#ff9f1c);
-        margin:0 -18px;
-        padding:28px 18px 78px 18px;
-        border-radius:0 0 0 0;
-        position:relative;
-        overflow:hidden;
-    }
-
-    .orange-hero::after {
-        content:"🐯";
-        position:absolute;
-        right:-22px;
-        bottom:-40px;
-        font-size:150px;
-        opacity:.16;
-    }
-
-    .screen-title {
-        color:#111111 !important;
-        font-size:34px;
-        font-weight:1000;
-        margin:0;
-        position:relative;
-        z-index:2;
-    }
-
-    .screen-subtitle {
-        color:#111111 !important;
-        font-size:18px;
-        font-weight:700;
-        margin-top:8px;
-        position:relative;
-        z-index:2;
-    }
-
-    .page-content {
-        margin-top:-58px;
-        position:relative;
-        z-index:5;
-        padding:0 10px;
+    .app-subtitle {
+        font-size: 13px;
+        opacity: .95;
+        margin-top: 4px;
     }
 
     .app-card {
-        background:white !important;
-        margin:10px 0;
-        padding:16px;
-        border-radius:22px;
-        box-shadow:0 8px 22px rgba(15,23,42,.12);
-        border:1px solid #e5e7eb;
-        overflow:visible !important;
+        background: white !important;
+        margin: 10px;
+        padding: 16px;
+        border-radius: 20px;
+        box-shadow: 0 5px 18px rgba(0,0,0,.10);
+        border: 1px solid #e5e7eb;
     }
 
-    .bottom-nav {
-        position:fixed;
-        left:50%;
-        bottom:0;
-        transform:translateX(-50%);
-        width:100%;
-        max-width:430px;
-        background:#111111;
-        padding:8px 8px 10px 8px;
-        display:grid;
-        grid-template-columns:repeat(6,1fr);
-        gap:4px;
-        z-index:999999;
-        box-shadow:0 -8px 24px rgba(0,0,0,.28);
-        border-radius:22px 22px 0 0;
+    .menu-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin: 10px;
     }
 
-    .bottom-item {
-        text-align:center;
-        color:white !important;
-        font-size:11px;
-        font-weight:800;
-        padding:7px 3px;
-        border-radius:16px;
-        min-height:50px;
+    .menu-btn {
+        background: white;
+        border-radius: 20px;
+        padding: 18px 12px;
+        text-align: center;
+        box-shadow: 0 5px 16px rgba(0,0,0,.10);
+        border: 1px solid #e5e7eb;
+        font-weight: 900;
+        color: #111827;
+        font-size: 14px;
     }
 
-    .bottom-item span {
-        display:block;
-        color:white !important;
-        font-size:21px;
-        line-height:22px;
-        margin-bottom:3px;
-    }
-
-    .bottom-active {
-        border:2px solid #f97316;
-        color:#f97316 !important;
-    }
-
-    .bottom-active span {
-        color:#f97316 !important;
+    .menu-btn span {
+        display: block;
+        font-size: 30px;
+        margin-bottom: 8px;
     }
 
     div.stButton > button {
-        width:100%;
-        min-height:52px !important;
-        border-radius:16px !important;
-        background:#0b8de3 !important;
-        color:white !important;
-        border:none !important;
-        font-weight:900 !important;
-        font-size:15px !important;
-        box-shadow:0 5px 14px rgba(11,141,227,.28);
-        white-space:normal !important;
+        width: 100%;
+        min-height: 58px !important;
+        border-radius: 18px !important;
+        background: #0b8de3 !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 900 !important;
+        font-size: 16px !important;
+        box-shadow: 0 5px 14px rgba(11,141,227,.28);
+        transition: all 0.12s ease-in-out !important;
+        cursor: pointer !important;
     }
 
-    div.stButton > button * {
-        color:white !important;
+    div.stButton > button:hover {
+        background: #0671bb !important;
+        transform: translateY(-1px);
     }
 
     div.stButton > button:active {
-        background:#22c55e !important;
-        transform:scale(.97);
+        background: #22c55e !important;
+        transform: scale(0.96);
+        box-shadow: 0 0 0 6px rgba(34,197,94,.28) !important;
+    }
+
+    div.stButton > button:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 6px rgba(34,197,94,.30) !important;
+    }
+
+    div.stButton > button * {
+        color: white !important;
     }
 
     input, textarea {
-        background:white !important;
-        color:#111827 !important;
-        border:2px solid #cbd5e1 !important;
-        border-radius:16px !important;
-        min-height:50px !important;
-        font-size:16px !important;
+        background: white !important;
+        color: #111827 !important;
+        border: 2px solid #cbd5e1 !important;
+        border-radius: 16px !important;
+        min-height: 52px !important;
+        font-size: 16px !important;
+    }
+
+    input::placeholder {
+        color: #64748b !important;
+        opacity: 1 !important;
     }
 
     div[data-baseweb="select"] > div {
-        background:white !important;
-        color:#111827 !important;
-        border:2px solid #cbd5e1 !important;
-        border-radius:16px !important;
-        min-height:50px !important;
+        background: white !important;
+        color: #111827 !important;
+        border: 2px solid #cbd5e1 !important;
+        border-radius: 16px !important;
+        min-height: 52px !important;
     }
 
     div[data-baseweb="select"] span,
     div[data-baseweb="select"] div {
-        color:#111827 !important;
+        color: #111827 !important;
     }
 
-    div[data-baseweb="popover"] {
-        z-index:9999999 !important;
+    div[data-baseweb="select"] svg {
+        fill: #111827 !important;
+        color: #111827 !important;
     }
 
     label, p, span, h1, h2, h3, h4, h5, h6 {
-        color:#111827 !important;
-        font-weight:800;
+        color: #111827 !important;
+        font-weight: 800;
+    }
+
+    .app-top label,
+    .app-top p,
+    .app-top span,
+    .app-top h1,
+    .app-top h2,
+    .app-top h3,
+    .app-top h4,
+    .app-top h5,
+    .app-top h6 {
+        color: white !important;
     }
 
     [data-testid="stDataFrame"] {
-        background:white !important;
-        border-radius:18px;
-        overflow:hidden;
+        background: white !important;
+        color: #111827 !important;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    [data-testid="stMetric"] {
+        background: white !important;
+        color: #111827 !important;
+        border-radius: 18px;
+        padding: 14px;
+        border: 1px solid #e5e7eb;
     }
     </style>
     """, unsafe_allow_html=True)
 
 
 def topo_app(titulo, subtitulo=""):
-    perfil = st.session_state.get("perfil", "").upper() or "ADMIN"
+    vendedor = st.session_state.get("vendedor", "")
+    perfil = st.session_state.get("perfil", "").upper()
 
     st.markdown(f"""
-    <div class="tigrao-header">
-        <div class="header-row">
-            <div class="hamburger">☰</div>
-
-            <div class="logo-area">
-                🐯 TIGRÃO
-                <div class="logo-sub">DISTRIBUIDORA</div>
-            </div>
-
-            <div class="admin-pill">👤 {perfil}</div>
+    <div class="app-top">
+        <div class="app-top-row">
+            <div>🐯 Tigrão</div>
+            <div>{perfil}</div>
         </div>
-
-        <div class="orange-hero">
-            <div class="screen-title">{titulo}</div>
-            <div class="screen-subtitle">{subtitulo}</div>
-        </div>
+        <div class="app-title">{titulo}</div>
+        <div class="app-subtitle">{subtitulo}</div>
+        <div class="app-subtitle">{vendedor}</div>
     </div>
     """, unsafe_allow_html=True)
-
-
-def abrir_conteudo():
-    st.markdown('<div class="page-content">', unsafe_allow_html=True)
-
-
-def fechar_conteudo():
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def abrir_card():
@@ -290,166 +224,130 @@ def fechar_card():
     st.markdown('</div>', unsafe_allow_html=True)
 
 
-def mudar_menu(nome):
-    st.session_state.menu_mobile = nome
-    st.rerun()
-
-
-def bottom_nav(menu_atual):
-    itens = [
-        ("Dashboard", "📊", "Dashboard"),
-        ("Novo Pedido", "🛒", "Novo Pedido"),
-        ("Pedidos Lançados", "📦", "Pedidos"),
-        ("Clientes", "👥", "Clientes"),
-        ("Produtos", "🏷️", "Produtos"),
-        ("Mais", "⋯", "Mais"),
-    ]
-
-    st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
-
-    for destino, icone, texto in itens:
-        ativo = "bottom-active" if menu_atual == destino or (menu_atual in ["Fornecedores", "Vendedores", "Importar Produtos", "Comissões", "Designer Visual", "Sair"] and destino == "Mais") else ""
-
-        st.markdown(f"""
-        <div class="bottom-item {ativo}">
-            <span>{icone}</span>
-            {texto}
-        </div>
-        """, unsafe_allow_html=True)
-
-        if st.button(texto, key=f"nav_{destino}"):
-            mudar_menu(destino)
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
 ensure_data_files()
 apply_style()
 aplicar_app_mobile()
 login_screen()
 
 if "menu_mobile" not in st.session_state:
-    st.session_state.menu_mobile = "Dashboard"
+    st.session_state.menu_mobile = "Início"
 
+
+def mudar_menu(nome):
+    st.session_state.menu_mobile = nome
+    st.rerun()
+
+
+menu_admin = [
+    ("Dashboard", "📊"),
+    ("Novo Pedido", "🛒"),
+    ("Pedidos Lançados", "📦"),
+    ("Clientes", "👥"),
+    ("Produtos", "🏷️"),
+    ("Fornecedores", "🚚"),
+    ("Vendedores", "👤"),
+    ("Importar Produtos", "📥"),
+    ("Comissões", "💰"),
+    ("Designer Visual", "🎨"),
+    ("Sair", "🚪"),
+]
+
+menu_vendedor = [
+    ("Novo Pedido", "🛒"),
+    ("Pedidos Lançados", "📦"),
+    ("Clientes", "👥"),
+    ("Produtos", "🏷️"),
+    ("Comissões", "💰"),
+    ("Sair", "🚪"),
+]
+
+opcoes = menu_admin if is_admin() else menu_vendedor
 menu = st.session_state.menu_mobile
 
 
-if menu == "Sair":
+if menu == "Início":
+    topo_app("Menu Principal", "Sistema de pedidos no formato aplicativo")
+
+    st.markdown('<div class="menu-grid">', unsafe_allow_html=True)
+
+    for nome, icone in opcoes:
+        st.markdown(f"""
+        <div class="menu-btn">
+            <span>{icone}</span>
+            {nome}
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button(nome, key=f"btn_{nome}"):
+            mudar_menu(nome)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+elif menu == "Sair":
     logout()
 
 
-elif menu == "Dashboard":
-    topo_app("Dashboard", "Visão geral da operação")
-    abrir_conteudo()
-    show_dashboard()
-    fechar_conteudo()
+else:
+    if st.button("← Voltar ao menu"):
+        mudar_menu("Início")
 
+    if menu == "Dashboard":
+        topo_app("Dashboard", "Visão geral da operação")
+        abrir_card()
+        show_dashboard()
+        fechar_card()
 
-elif menu == "Novo Pedido":
-    topo_app("Novo Pedido", "Lançamento rápido de pedidos")
-    abrir_conteudo()
-    abrir_card()
-    show_new_order()
-    fechar_card()
-    fechar_conteudo()
+    elif menu == "Novo Pedido":
+        topo_app("Novo Pedido", "Lançamento rápido de pedidos")
+        abrir_card()
+        show_new_order()
+        fechar_card()
 
+    elif menu == "Pedidos Lançados":
+        topo_app("Pedidos", "Pedidos lançados pelos vendedores")
+        abrir_card()
+        show_orders()
+        fechar_card()
 
-elif menu == "Pedidos Lançados":
-    topo_app("Pedidos", "Pedidos lançados")
-    abrir_conteudo()
-    abrir_card()
-    show_orders()
-    fechar_card()
-    fechar_conteudo()
+    elif menu == "Clientes":
+        topo_app("Clientes", "Consulta e cadastro de clientes")
+        abrir_card()
+        show_clients()
+        fechar_card()
 
+    elif menu == "Produtos":
+        topo_app("Produtos", "Consulta de produtos e preços")
+        abrir_card()
+        show_products()
+        fechar_card()
 
-elif menu == "Clientes":
-    topo_app("Clientes", "Cadastro e consulta")
-    abrir_conteudo()
-    abrir_card()
-    show_clients()
-    fechar_card()
-    fechar_conteudo()
+    elif menu == "Fornecedores":
+        topo_app("Fornecedores", "Cadastro e consulta")
+        abrir_card()
+        show_suppliers()
+        fechar_card()
 
+    elif menu == "Vendedores":
+        topo_app("Vendedores", "Equipe comercial")
+        abrir_card()
+        show_users()
+        fechar_card()
 
-elif menu == "Produtos":
-    topo_app("Produtos", "Consulta de produtos")
-    abrir_conteudo()
-    abrir_card()
-    show_products()
-    fechar_card()
-    fechar_conteudo()
+    elif menu == "Importar Produtos":
+        topo_app("Importar Produtos", "Atualizar base de produtos")
+        abrir_card()
+        show_import_products()
+        fechar_card()
 
+    elif menu == "Comissões":
+        topo_app("Comissões", "Controle de vendas e comissão")
+        abrir_card()
+        show_commissions()
+        fechar_card()
 
-elif menu == "Fornecedores":
-    topo_app("Fornecedores", "Cadastro e consulta")
-    abrir_conteudo()
-    abrir_card()
-    show_suppliers()
-    fechar_card()
-    fechar_conteudo()
-
-
-elif menu == "Vendedores":
-    topo_app("Vendedores", "Equipe comercial")
-    abrir_conteudo()
-    abrir_card()
-    show_users()
-    fechar_card()
-    fechar_conteudo()
-
-
-elif menu == "Importar Produtos":
-    topo_app("Importar Produtos", "Atualizar base")
-    abrir_conteudo()
-    abrir_card()
-    show_import_products()
-    fechar_card()
-    fechar_conteudo()
-
-
-elif menu == "Comissões":
-    topo_app("Comissões", "Controle de vendas")
-    abrir_conteudo()
-    abrir_card()
-    show_commissions()
-    fechar_card()
-    fechar_conteudo()
-
-
-elif menu == "Designer Visual":
-    topo_app("Designer Visual", "Personalização")
-    abrir_conteudo()
-    abrir_card()
-    show_visual_designer()
-    fechar_card()
-    fechar_conteudo()
-
-
-elif menu == "Mais":
-    topo_app("Mais", "Outras opções")
-    abrir_conteudo()
-
-    if is_admin():
-        opcoes_mais = [
-            ("Fornecedores", "🚚"),
-            ("Vendedores", "👤"),
-            ("Importar Produtos", "📥"),
-            ("Comissões", "💰"),
-            ("Designer Visual", "🎨"),
-            ("Sair", "🚪"),
-        ]
-    else:
-        opcoes_mais = [
-            ("Comissões", "💰"),
-            ("Sair", "🚪"),
-        ]
-
-    for nome, icone in opcoes_mais:
-        if st.button(f"{icone} {nome}", key=f"mais_{nome}", use_container_width=True):
-            mudar_menu(nome)
-
-    fechar_conteudo()
-
-
-bottom_nav(menu)
+    elif menu == "Designer Visual":
+        topo_app("Designer Visual", "Personalização das telas")
+        abrir_card()
+        show_visual_designer()
+        fechar_card()
