@@ -208,37 +208,6 @@ def _mobile_css_orders():
         box-shadow: 0 4px 14px rgba(15,23,42,.08) !important;
     }
 
-    .cart-title {
-        color: #0b8de3 !important;
-        font-size: 16px !important;
-        font-weight: 1000 !important;
-        margin-bottom: 6px !important;
-    }
-
-    .cart-grid {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-        margin-top: 10px !important;
-    }
-
-    .cart-mini {
-        background: #f8fafc !important;
-        border-radius: 12px !important;
-        padding: 9px !important;
-        border: 1px solid #e5e7eb !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        color: #475569 !important;
-    }
-
-    .cart-mini b {
-        display: block !important;
-        font-size: 14px !important;
-        color: #111827 !important;
-        margin-top: 3px !important;
-    }
-
     .resumo-pedido {
         background: #111827 !important;
         border-radius: 20px !important;
@@ -382,23 +351,27 @@ def show_new_order() -> None:
         total_general = cart["total"].sum()
         discount_general = subtotal_general - total_general
 
-        for i, item in enumerate(st.session_state.carrinho):
-            st.markdown(
-                f"""
-                <div class="cart-card">
-                    <div class="cart-title">{item["produto"]}</div>
-                    <div class="produto-info">Código: {item["codigo"]} | Unidade: {item["un"]}</div>
+        st.markdown('<div class="cart-card">', unsafe_allow_html=True)
 
-                    <div class="cart-grid">
-                        <div class="cart-mini">Qtd<b>{item["quantidade"]}</b></div>
-                        <div class="cart-mini">Preço<b>{money(item["preco"])}</b></div>
-                        <div class="cart-mini">Desconto<b>{item["desconto"]:.2f}%</b></div>
-                        <div class="cart-mini">Total<b>{money(item["total"])}</b></div>
-                    </div>
+        for i, item in enumerate(st.session_state.carrinho):
+            st.markdown(f"""
+            <div style="border-bottom:1px solid #e5e7eb; padding:12px 0;">
+                <div style="color:#0b8de3; font-weight:1000; font-size:15px;">
+                    {item["produto"]}
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+
+                <div style="font-size:13px; font-weight:800; color:#475569; margin-top:4px;">
+                    Código: {item["codigo"]} | Unidade: {item["un"]}
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
+                    <div>Qtd<br><b>{item["quantidade"]}</b></div>
+                    <div>Preço<br><b>{money(item["preco"])}</b></div>
+                    <div>Desconto<br><b>{item["desconto"]:.2f}%</b></div>
+                    <div>Total<br><b>{money(item["total"])}</b></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
             if st.button(
                 f"🗑️ Remover item {i + 1}",
@@ -407,6 +380,8 @@ def show_new_order() -> None:
             ):
                 st.session_state.carrinho.pop(i)
                 st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(f"""
     <div class="resumo-pedido">
