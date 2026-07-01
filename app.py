@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Tigrão App",
+    page_title="Tigrão Premium",
     page_icon="🐯",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -22,7 +22,7 @@ COMISSAO_PADRAO = 0.07
 
 
 # =========================
-# BANCO
+# BANCO DE DADOS
 # =========================
 
 def criar_banco():
@@ -82,12 +82,10 @@ def safe_float(valor):
 
 def numero_pedido():
     pedidos = ler_excel(ARQ_PEDIDOS)
-
     if len(pedidos) == 0 or "pedido" not in pedidos.columns:
         return 1
 
     maior = pd.to_numeric(pedidos["pedido"], errors="coerce").max()
-
     return 1 if pd.isna(maior) else int(maior) + 1
 
 
@@ -119,7 +117,7 @@ def filtrar_por_usuario(pedidos):
 
 
 # =========================
-# CSS LEVE / NATIVO
+# ESTILO PREMIUM MOBILE
 # =========================
 
 def css():
@@ -130,137 +128,289 @@ def css():
     }
 
     [data-testid="stAppViewContainer"] {
-        background:#f4f5f7 !important;
+        background:#f5f6f8 !important;
     }
 
     .block-container {
         max-width:520px !important;
-        padding-top:12px !important;
-        padding-bottom:35px !important;
+        padding:0 14px 34px 14px !important;
+        margin:auto !important;
     }
 
-    .stButton > button {
-        border-radius:16px !important;
-        min-height:46px !important;
-        font-weight:800 !important;
-        border:0 !important;
-        background:#0b8de3 !important;
-        color:white !important;
+    * {
+        font-family:Arial, sans-serif;
+        box-sizing:border-box;
+    }
+
+    .topbar {
+        background:linear-gradient(180deg,#111827,#0b0f16);
+        border-radius:0 0 24px 24px;
+        padding:18px 16px;
+        margin:0 -14px 16px -14px;
+        color:white;
+        box-shadow:0 6px 20px rgba(0,0,0,.25);
+    }
+
+    .topbar-row {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+    }
+
+    .hamb {
+        color:#ff8500;
+        font-size:31px;
+        font-weight:1000;
+    }
+
+    .brand {
+        text-align:center;
+        line-height:1;
+    }
+
+    .brand-main {
+        color:white;
+        font-size:28px;
+        font-weight:1000;
+        letter-spacing:1px;
+    }
+
+    .brand-sub {
+        color:#ff8500;
+        font-size:11px;
+        font-weight:1000;
+        letter-spacing:3px;
+        margin-top:4px;
+    }
+
+    .profile-pill {
+        border:3px solid #ff8500;
+        border-radius:22px;
+        padding:8px 10px;
+        color:white;
+        font-size:12px;
+        font-weight:1000;
+    }
+
+    .page-title {
+        display:flex;
+        gap:12px;
+        align-items:center;
+        margin:14px 0 14px 0;
+    }
+
+    .page-icon {
+        width:56px;
+        height:56px;
+        background:#138fe5;
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        border-radius:13px;
+        font-size:31px;
+        box-shadow:0 6px 18px rgba(19,143,229,.35);
+    }
+
+    .page-title h1 {
+        margin:0;
+        padding:0;
+        color:#111;
+        font-size:29px;
+        font-weight:1000;
+        line-height:1;
+    }
+
+    .page-title p {
+        margin:6px 0 0 0;
+        color:#6b7280;
+        font-size:16px;
+        font-weight:700;
+    }
+
+    .premium-card {
+        background:white;
+        border-radius:20px;
+        padding:16px;
+        box-shadow:0 6px 20px rgba(15,23,42,.10);
+        margin-bottom:14px;
+        border:1px solid rgba(15,23,42,.06);
+    }
+
+    .section-head {
+        display:flex;
+        align-items:center;
+        gap:9px;
+        color:#111;
+        font-size:18px;
+        font-weight:1000;
+        margin:6px 0 12px 0;
+    }
+
+    .blue-icon {
+        color:#138fe5;
+        font-size:25px;
+    }
+
+    .orange-line {
+        width:44px;
+        height:4px;
+        border-radius:10px;
+        background:#ff8500;
+        margin:4px 0 14px 0;
+    }
+
+    .item-total {
+        background:white;
+        border:1px solid #e5e7eb;
+        border-radius:17px;
+        padding:15px;
+        margin:12px 0;
+    }
+
+    .item-total-label {
+        color:#4b5563;
+        font-weight:1000;
+        font-size:14px;
+    }
+
+    .item-total-value {
+        color:#138fe5;
+        font-size:36px;
+        font-weight:1000;
+        margin-top:4px;
+    }
+
+    .pedido-card {
+        background:white;
+        border-radius:18px;
+        padding:15px;
+        box-shadow:0 6px 18px rgba(15,23,42,.10);
+        margin-bottom:12px;
+        border-left:6px solid #ff8500;
+        color:#111;
+    }
+
+    .pedido-card b {
+        color:#111 !important;
+    }
+
+    .pedido-card small {
+        color:#64748b;
+    }
+
+    .valor {
+        color:#138fe5 !important;
+        font-size:20px;
+        font-weight:1000;
+    }
+
+    .resumo-card {
+        background:white;
+        border-radius:18px;
+        padding:15px;
+        box-shadow:0 6px 18px rgba(15,23,42,.08);
+        margin:14px 0;
+        border:1px solid rgba(15,23,42,.08);
+    }
+
+    .resumo-title {
+        color:#111;
+        font-weight:1000;
+        font-size:17px;
+        margin-bottom:10px;
+    }
+
+    .resumo-row {
+        display:flex;
+        justify-content:space-between;
+        padding:8px 0;
+        border-bottom:1px dashed #e5e7eb;
+        font-size:16px;
+    }
+
+    .resumo-row:last-child {
+        border-bottom:0;
+        font-weight:1000;
+        font-size:18px;
+    }
+
+    .resumo-total {
+        color:#138fe5;
+        font-weight:1000;
+        font-size:24px;
     }
 
     div[data-testid="stMetric"] {
         background:white;
-        padding:14px;
+        padding:15px;
         border-radius:18px;
-        box-shadow:0 5px 16px rgba(0,0,0,.08);
+        box-shadow:0 6px 18px rgba(15,23,42,.09);
+        border:1px solid rgba(15,23,42,.06);
     }
 
     div[data-testid="stMetricLabel"] {
-        font-weight:900;
+        font-weight:1000;
+        color:#4b5563;
+    }
+
+    div[data-testid="stMetricValue"] {
+        color:#138fe5;
+        font-weight:1000;
+    }
+
+    .stButton > button {
+        border-radius:16px !important;
+        min-height:52px !important;
+        font-weight:1000 !important;
+        border:none !important;
+        background:#138fe5 !important;
+        color:white !important;
+        box-shadow:0 5px 14px rgba(19,143,229,.28);
+    }
+
+    .stButton > button:hover {
+        background:#0b7fd1 !important;
+        color:white !important;
+    }
+
+    div[data-testid="stHorizontalBlock"] .stButton > button {
+        min-height:55px !important;
+        font-size:15px !important;
     }
 
     input, textarea {
         border-radius:14px !important;
-        min-height:46px !important;
+        min-height:48px !important;
         font-weight:700 !important;
     }
 
     div[data-baseweb="select"] > div {
         border-radius:14px !important;
-        min-height:46px !important;
+        min-height:48px !important;
     }
 
-    .titulo-app {
-        background:#111;
-        border-radius:22px;
-        padding:18px;
-        color:white;
-        text-align:center;
-        margin-bottom:10px;
-    }
-
-    .titulo-app h1 {
-        color:white !important;
-        font-size:28px;
-        margin:0;
-        padding:0;
-    }
-
-    .titulo-app p {
-        color:#ff8500 !important;
-        font-weight:900;
-        letter-spacing:3px;
-        margin:4px 0 0 0;
-    }
-
-    .faixa {
-        background:#ff8500;
-        color:#111;
-        border-radius:22px;
-        padding:18px;
-        margin-bottom:16px;
-    }
-
-    .faixa h2 {
-        color:#111 !important;
-        font-size:28px;
-        margin:0 0 4px 0;
-        padding:0;
-    }
-
-    .faixa p {
-        color:#111 !important;
-        font-weight:800;
-        margin:0;
-    }
-
-    .card {
+    .login-box {
         background:white;
-        border-radius:18px;
-        padding:14px;
-        box-shadow:0 5px 16px rgba(0,0,0,.08);
-        margin-bottom:12px;
-        border-left:5px solid #ff8500;
-        color:#111;
+        border-radius:22px;
+        padding:20px;
+        box-shadow:0 8px 24px rgba(15,23,42,.10);
+        margin-top:20px;
     }
 
-    .card b {
-        color:#111 !important;
-    }
+    @media(max-width:420px) {
+        .brand-main {
+            font-size:23px;
+        }
 
-    .valor {
-        color:#ff8500 !important;
-        font-weight:900;
-        font-size:20px;
-    }
+        .profile-pill {
+            font-size:10px;
+            padding:7px 8px;
+        }
 
-    .resumo-box {
-        background:#111827;
-        border-radius:18px;
-        padding:14px;
-        color:white;
-        margin-top:12px;
-    }
-
-    .resumo-box p {
-        color:white !important;
-        margin:5px 0;
-        font-weight:800;
-    }
-
-    .subtitulo {
-        font-size:24px;
-        font-weight:900;
-        margin:18px 0 8px 0;
-        color:#111;
-    }
-
-    .linha-laranja {
-        width:48px;
-        height:4px;
-        border-radius:4px;
-        background:#ff8500;
-        margin-bottom:12px;
+        .page-title h1 {
+            font-size:26px;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -280,54 +430,95 @@ def iniciar_sessao():
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = []
 
+    if "form_key" not in st.session_state:
+        st.session_state.form_key = 0
+
 
 def ir_para(page):
     st.session_state.page = page
     st.rerun()
 
 
-def topo(titulo, subtitulo):
+def topo(titulo, subtitulo, icone="📦"):
     perfil = st.session_state.get("perfil", "VENDEDOR")
 
-    st.markdown("""
-    <div class="titulo-app">
-        <h1>🐯 TIGRÃO</h1>
-        <p>DISTRIBUIDORA</p>
-    </div>
-    """, unsafe_allow_html=True)
-
     st.markdown(f"""
-    <div class="faixa">
-        <h2>{titulo}</h2>
-        <p>{subtitulo} • {perfil}</p>
+    <div class="topbar">
+        <div class="topbar-row">
+            <div class="hamb">☰</div>
+            <div class="brand">
+                <div class="brand-main">🐯 TIGRÃO</div>
+                <div class="brand-sub">DISTRIBUIDORA</div>
+            </div>
+            <div class="profile-pill">👤 {perfil}</div>
+        </div>
+    </div>
+
+    <div class="page-title">
+        <div class="page-icon">{icone}</div>
+        <div>
+            <h1>{titulo}</h1>
+            <p>{subtitulo}</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
 
 def menu_nativo():
-    st.divider()
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    labels = {
+        "dashboard": "🏠\nInício",
+        "novo": "🛒\nNovo Pedido",
+        "pedidos": "📋\nPedidos",
+        "comissao": "💰\nComissão",
+        "mais": "☰\nMais",
+    }
 
     col1, col2, col3, col4, col5 = st.columns(5, gap="small")
 
     with col1:
-        if st.button("🏠", key="nav_inicio", use_container_width=True):
+        texto = "✅ Início" if st.session_state.page == "dashboard" else "🏠 Início"
+        if st.button(texto, key="nav_inicio", use_container_width=True):
             ir_para("dashboard")
 
     with col2:
-        if st.button("🛒", key="nav_novo", use_container_width=True):
+        texto = "✅ Novo" if st.session_state.page == "novo" else "🛒 Novo"
+        if st.button(texto, key="nav_novo", use_container_width=True):
             ir_para("novo")
 
     with col3:
-        if st.button("📋", key="nav_pedidos", use_container_width=True):
+        texto = "✅ Pedidos" if st.session_state.page == "pedidos" else "📋 Pedidos"
+        if st.button(texto, key="nav_pedidos", use_container_width=True):
             ir_para("pedidos")
 
     with col4:
-        if st.button("💰", key="nav_comissao", use_container_width=True):
+        texto = "✅ Com." if st.session_state.page == "comissao" else "💰 Com."
+        if st.button(texto, key="nav_comissao", use_container_width=True):
             ir_para("comissao")
 
     with col5:
-        if st.button("☰", key="nav_mais", use_container_width=True):
+        texto = "✅ Mais" if st.session_state.page == "mais" else "☰ Mais"
+        if st.button(texto, key="nav_mais", use_container_width=True):
             ir_para("mais")
+
+
+def secao(titulo, icone=""):
+    st.markdown(f"""
+    <div class="section-head">
+        <span class="blue-icon">{icone}</span>
+        <span>{titulo}</span>
+    </div>
+    <div class="orange-line"></div>
+    """, unsafe_allow_html=True)
+
+
+def abrir_card():
+    st.markdown('<div class="premium-card">', unsafe_allow_html=True)
+
+
+def fechar_card():
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================
@@ -339,10 +530,13 @@ def login():
         return
 
     st.markdown("""
-    <div class="titulo-app">
-        <h1>🐯 TIGRÃO</h1>
-        <p>DISTRIBUIDORA</p>
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-main">🐯 TIGRÃO</div>
+            <div class="brand-sub">DISTRIBUIDORA</div>
+        </div>
     </div>
+    <div class="login-box">
     """, unsafe_allow_html=True)
 
     st.subheader("Entrar no sistema")
@@ -380,6 +574,9 @@ def login():
             st.rerun()
 
     st.info("Admin: admin / admin123  |  Vendedor: vendedor / 123")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
     st.stop()
 
 
@@ -388,7 +585,7 @@ def login():
 # =========================
 
 def dashboard():
-    topo("Dashboard", "Resumo da operação")
+    topo("Dashboard", "Resumo da operação", "📊")
 
     pedidos = filtrar_por_usuario(ler_excel(ARQ_PEDIDOS))
 
@@ -400,12 +597,11 @@ def dashboard():
     total_comissao = total_vendas * st.session_state.get("comissao", COMISSAO_PADRAO)
 
     c1, c2 = st.columns(2)
-    c1.metric("Pedidos", total_pedidos)
-    c2.metric("Comissão", dinheiro(total_comissao))
+    c1.metric("📋 Pedidos", total_pedidos)
+    c2.metric("💰 Comissão", dinheiro(total_comissao))
+    st.metric("💲 Vendas", dinheiro(total_vendas))
 
-    st.metric("Vendas", dinheiro(total_vendas))
-
-    st.markdown('<div class="subtitulo">🕘 Últimos pedidos</div><div class="linha-laranja"></div>', unsafe_allow_html=True)
+    secao("ÚLTIMOS PEDIDOS", "🕘")
 
     resumo = resumo_pedidos(pedidos).sort_values("pedido", ascending=False).head(5)
 
@@ -414,22 +610,31 @@ def dashboard():
     else:
         for _, row in resumo.iterrows():
             st.markdown(f"""
-            <div class="card">
+            <div class="pedido-card">
                 <b>Pedido #{row["pedido"]}</b><br>
                 Cliente: {row["cliente"]}<br>
-                Data: {row["data"]}<br>
+                <small>{row["data"]}</small><br>
                 <span class="valor">{dinheiro(row["total"])}</span> — {row["status"]}
             </div>
             """, unsafe_allow_html=True)
 
 
 def novo_pedido():
-    topo("Novo Pedido", "Lançamento pelo celular")
+    topo("Novo Pedido", "Lançamento de pedido", "🛒")
 
     clientes = ler_excel(ARQ_CLIENTES)
     produtos = ler_excel(ARQ_PRODUTOS)
 
-    busca_cliente = st.text_input("Buscar cliente", placeholder="Digite nome, código ou iniciais")
+    abrir_card()
+
+    secao("CLIENTE", "👤")
+
+    busca_cliente = st.text_input(
+        "Buscar cliente",
+        placeholder="Buscar cliente por nome, código ou CNPJ",
+        label_visibility="collapsed",
+        key=f"busca_cliente_{st.session_state.form_key}",
+    )
 
     clientes_filtrados = clientes.copy()
     if len(clientes_filtrados) and busca_cliente.strip():
@@ -441,9 +646,21 @@ def novo_pedido():
         ]
 
     lista_clientes = clientes_filtrados["cliente"].astype(str).tolist() if len(clientes_filtrados) else ["CLIENTE NÃO ENCONTRADO"]
-    cliente = st.selectbox("Cliente", lista_clientes)
+    cliente = st.selectbox(
+        "Selecionar cliente",
+        lista_clientes,
+        label_visibility="collapsed",
+        key=f"cliente_{st.session_state.form_key}",
+    )
 
-    busca_produto = st.text_input("Buscar produto", placeholder="Digite código ou nome do produto")
+    secao("PRODUTO", "📦")
+
+    busca_produto = st.text_input(
+        "Buscar produto",
+        placeholder="Buscar produto por código ou nome",
+        label_visibility="collapsed",
+        key=f"busca_produto_{st.session_state.form_key}",
+    )
 
     produtos_filtrados = produtos.copy()
     if len(produtos_filtrados) and busca_produto.strip():
@@ -458,7 +675,12 @@ def novo_pedido():
     for _, row in produtos_filtrados.iterrows():
         opcoes.append(f'{row["codigo"]} - {row["produto"]} | {dinheiro(row["preco"])}')
 
-    produto_txt = st.selectbox("Produto", opcoes)
+    produto_txt = st.selectbox(
+        "Produto",
+        opcoes,
+        label_visibility="collapsed",
+        key=f"produto_{st.session_state.form_key}",
+    )
 
     produto = None
     if produto_txt != "Selecione o produto":
@@ -467,7 +689,7 @@ def novo_pedido():
 
     if produto:
         st.markdown(f"""
-        <div class="card">
+        <div class="pedido-card">
             <b>{produto["produto"]}</b><br>
             Código: {produto["codigo"]}<br>
             Fornecedor: {produto.get("fornecedor", "")}<br>
@@ -476,14 +698,39 @@ def novo_pedido():
         """, unsafe_allow_html=True)
 
     c1, c2 = st.columns(2)
-    qtd = c1.number_input("Qtd", min_value=0, value=0, step=1)
-    desc = c2.number_input("Desc. %", min_value=0.0, value=0.0, step=1.0)
+
+    with c1:
+        secao("QUANTIDADE", "#")
+        qtd = st.number_input(
+            "Quantidade",
+            min_value=0,
+            value=0,
+            step=1,
+            label_visibility="collapsed",
+            key=f"qtd_{st.session_state.form_key}",
+        )
+
+    with c2:
+        secao("DESC. %", "🏷️")
+        desc = st.number_input(
+            "Desconto",
+            min_value=0.0,
+            value=0.0,
+            step=1.0,
+            label_visibility="collapsed",
+            key=f"desc_{st.session_state.form_key}",
+        )
 
     preco = safe_float(produto["preco"]) if produto else 0
     subtotal = preco * qtd
     total_item = subtotal - (subtotal * desc / 100)
 
-    st.metric("Total do item", dinheiro(total_item))
+    st.markdown(f"""
+    <div class="item-total">
+        <div class="item-total-label">💳 TOTAL DO ITEM</div>
+        <div class="item-total-value">{dinheiro(total_item)}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     if st.button("➕ ADICIONAR AO CARRINHO", use_container_width=True):
         if not produto:
@@ -503,85 +750,99 @@ def novo_pedido():
                 "subtotal": subtotal,
                 "total": total_item,
             })
+            st.session_state.form_key += 1
             st.success("Produto adicionado.")
             time.sleep(0.4)
             st.rerun()
+
+    fechar_card()
 
     carrinho(cliente)
 
 
 def carrinho(cliente):
-    st.markdown('<div class="subtitulo">🛒 Carrinho</div><div class="linha-laranja"></div>', unsafe_allow_html=True)
+    abrir_card()
+    secao("CARRINHO", "🛒")
 
     if len(st.session_state.carrinho) == 0:
-        st.info("Nenhum produto adicionado.")
+        st.info("🛒 Nenhum produto adicionado. Adicione produtos acima para montar o pedido.")
+        fechar_card()
         return
 
     for i, item in enumerate(st.session_state.carrinho):
         st.markdown(f"""
-        <div class="card">
+        <div class="pedido-card">
             <b>{item["produto"]}</b><br>
             Qtd: {item["quantidade"]} | Unit: {dinheiro(item["preco"])}<br>
             Total: <span class="valor">{dinheiro(item["total"])}</span>
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button(f"🗑 Remover item {i+1}", key=f"del_{i}", use_container_width=True):
+        if st.button(f"🗑 REMOVER ITEM {i+1}", key=f"del_{i}", use_container_width=True):
             st.session_state.carrinho.pop(i)
             st.rerun()
+
+    fechar_card()
 
     subtotal = sum(safe_float(x["subtotal"]) for x in st.session_state.carrinho)
     total = sum(safe_float(x["total"]) for x in st.session_state.carrinho)
     desconto = subtotal - total
 
     st.markdown(f"""
-    <div class="resumo-box">
-        <p>Subtotal: {dinheiro(subtotal)}</p>
-        <p>Desconto: {dinheiro(desconto)}</p>
-        <p>Total: {dinheiro(total)}</p>
+    <div class="resumo-card">
+        <div class="resumo-title">📄 RESUMO DO PEDIDO</div>
+        <div class="resumo-row"><span>Subtotal</span><span>{dinheiro(subtotal)}</span></div>
+        <div class="resumo-row"><span>Desconto</span><span style="color:#dc2626;">{dinheiro(desconto)}</span></div>
+        <div class="resumo-row"><span>Total do Pedido</span><span class="resumo-total">{dinheiro(total)}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
-    if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
-        pedidos = ler_excel(ARQ_PEDIDOS)
-        numero = numero_pedido()
-        data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        vendedor = st.session_state.get("nome", "Vendedor")
+    c1, c2 = st.columns(2)
 
-        linhas = []
+    with c1:
+        if st.button("🗑 LIMPAR", use_container_width=True):
+            st.session_state.carrinho = []
+            st.session_state.form_key += 1
+            st.rerun()
 
-        for item in st.session_state.carrinho:
-            linhas.append({
-                "pedido": numero,
-                "data": data,
-                "vendedor": vendedor,
-                "cliente": cliente,
-                "codigo": item["codigo"],
-                "produto": item["produto"],
-                "un": item["un"],
-                "quantidade": item["quantidade"],
-                "preco": item["preco"],
-                "desconto": item["desconto"],
-                "subtotal": item["subtotal"],
-                "total": item["total"],
-                "status": "PENDENTE",
-            })
+    with c2:
+        if st.button("✅ FINALIZAR", use_container_width=True):
+            pedidos = ler_excel(ARQ_PEDIDOS)
+            numero = numero_pedido()
+            data = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            vendedor = st.session_state.get("nome", "Vendedor")
 
-        pedidos = pd.concat([pedidos, pd.DataFrame(linhas)], ignore_index=True)
-        salvar_excel(pedidos, ARQ_PEDIDOS)
+            linhas = []
 
-        st.session_state.carrinho = []
-        st.success(f"Pedido nº {numero} salvo com sucesso!")
-        time.sleep(1)
-        ir_para("pedidos")
+            for item in st.session_state.carrinho:
+                linhas.append({
+                    "pedido": numero,
+                    "data": data,
+                    "vendedor": vendedor,
+                    "cliente": cliente,
+                    "codigo": item["codigo"],
+                    "produto": item["produto"],
+                    "un": item["un"],
+                    "quantidade": item["quantidade"],
+                    "preco": item["preco"],
+                    "desconto": item["desconto"],
+                    "subtotal": item["subtotal"],
+                    "total": item["total"],
+                    "status": "PENDENTE",
+                })
 
-    if st.button("🧹 LIMPAR CARRINHO", use_container_width=True):
-        st.session_state.carrinho = []
-        st.rerun()
+            pedidos = pd.concat([pedidos, pd.DataFrame(linhas)], ignore_index=True)
+            salvar_excel(pedidos, ARQ_PEDIDOS)
+
+            st.session_state.carrinho = []
+            st.session_state.form_key += 1
+            st.success(f"Pedido nº {numero} salvo com sucesso!")
+            time.sleep(1)
+            ir_para("pedidos")
 
 
 def pedidos_tela():
-    topo("Pedidos", "Histórico de pedidos")
+    topo("Pedidos", "Histórico de pedidos", "📋")
 
     pedidos = filtrar_por_usuario(ler_excel(ARQ_PEDIDOS))
     resumo = resumo_pedidos(pedidos).sort_values("pedido", ascending=False)
@@ -592,7 +853,7 @@ def pedidos_tela():
 
     for _, row in resumo.iterrows():
         st.markdown(f"""
-        <div class="card">
+        <div class="pedido-card">
             <b>Pedido #{row["pedido"]}</b><br>
             Cliente: {row["cliente"]}<br>
             Vendedor: {row["vendedor"]}<br>
@@ -603,13 +864,13 @@ def pedidos_tela():
         """, unsafe_allow_html=True)
 
         if str(row["status"]).upper() == "PENDENTE":
-            if st.button(f"✏️ Editar pedido {row['pedido']}", key=f"edit_{row['pedido']}", use_container_width=True):
+            if st.button(f"✏️ EDITAR PEDIDO {row['pedido']}", key=f"edit_{row['pedido']}", use_container_width=True):
                 st.session_state.pedido_editando = int(row["pedido"])
                 ir_para("editar")
 
 
 def editar_pedido():
-    topo("Editar Pedido", "Alterar pedido pendente")
+    topo("Editar Pedido", "Alterar pedido pendente", "✏️")
 
     numero = st.session_state.get("pedido_editando")
     pedidos = ler_excel(ARQ_PEDIDOS)
@@ -630,11 +891,12 @@ def editar_pedido():
     novos = []
 
     for idx, row in dados.iterrows():
+        abrir_card()
         st.markdown(f"### {row['produto']}")
 
         c1, c2 = st.columns(2)
-        qtd = c1.number_input("Qtd", min_value=0, value=int(row["quantidade"]), step=1, key=f"qtd_{idx}")
-        desc = c2.number_input("Desc. %", min_value=0.0, value=safe_float(row["desconto"]), step=1.0, key=f"desc_{idx}")
+        qtd = c1.number_input("Qtd", min_value=0, value=int(row["quantidade"]), step=1, key=f"edit_qtd_{idx}")
+        desc = c2.number_input("Desc. %", min_value=0.0, value=safe_float(row["desconto"]), step=1.0, key=f"edit_desc_{idx}")
         excluir = st.checkbox("Excluir item", key=f"exc_{idx}")
 
         preco = safe_float(row["preco"])
@@ -651,7 +913,7 @@ def editar_pedido():
             item["total"] = total
             novos.append(item)
 
-        st.divider()
+        fechar_card()
 
     if st.button("💾 SALVAR ALTERAÇÕES", use_container_width=True):
         if len(novos) == 0:
@@ -670,7 +932,7 @@ def editar_pedido():
 
 
 def comissao_tela():
-    topo("Comissão", "Resumo da comissão")
+    topo("Comissão", "Resumo da comissão", "💰")
 
     pedidos = filtrar_por_usuario(ler_excel(ARQ_PEDIDOS))
 
@@ -680,29 +942,29 @@ def comissao_tela():
     vendas = pedidos["total"].sum() if len(pedidos) else 0
     comissao = vendas * st.session_state.get("comissao", COMISSAO_PADRAO)
 
-    st.metric("Vendas", dinheiro(vendas))
-    st.metric("Comissão", dinheiro(comissao))
+    st.metric("💲 Vendas", dinheiro(vendas))
+    st.metric("💰 Comissão", dinheiro(comissao))
 
 
 def admin_tela():
-    topo("Administração", "Área do administrador")
+    topo("Administração", "Área do administrador", "⚙️")
 
     if st.session_state.get("perfil") != "ADMIN":
         st.error("Acesso permitido somente para administrador.")
         return
 
-    if st.button("👥 Usuários", use_container_width=True):
+    if st.button("👥 USUÁRIOS", use_container_width=True):
         ir_para("admin_usuarios")
 
-    if st.button("🏪 Clientes", use_container_width=True):
+    if st.button("🏪 CLIENTES", use_container_width=True):
         ir_para("admin_clientes")
 
-    if st.button("📦 Produtos", use_container_width=True):
+    if st.button("📦 PRODUTOS", use_container_width=True):
         ir_para("admin_produtos")
 
 
 def admin_usuarios():
-    topo("Usuários", "Cadastro de vendedores")
+    topo("Usuários", "Cadastro de vendedores", "👥")
 
     if st.session_state.get("perfil") != "ADMIN":
         st.error("Acesso negado.")
@@ -743,7 +1005,7 @@ def admin_usuarios():
 
 
 def admin_clientes():
-    topo("Clientes", "Cadastro de clientes")
+    topo("Clientes", "Cadastro de clientes", "🏪")
 
     if st.session_state.get("perfil") != "ADMIN":
         st.error("Acesso negado.")
@@ -789,7 +1051,7 @@ def admin_clientes():
 
 
 def admin_produtos():
-    topo("Produtos", "Cadastro de produtos")
+    topo("Produtos", "Cadastro de produtos", "📦")
 
     if st.session_state.get("perfil") != "ADMIN":
         st.error("Acesso negado.")
@@ -830,7 +1092,7 @@ def admin_produtos():
 
 
 def mais_tela():
-    topo("Mais", "Opções do sistema")
+    topo("Mais", "Opções do sistema", "☰")
 
     st.info(f"Usuário: {st.session_state.get('nome')} | Perfil: {st.session_state.get('perfil')}")
 
