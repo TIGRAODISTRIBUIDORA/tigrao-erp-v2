@@ -4,6 +4,20 @@ from html import escape
 from database import COMMISSION_RATE, ORDERS_FILE, money, read_table
 
 
+def card_dashboard(icone, titulo, valor, descricao):
+    st.markdown(
+        f"""
+        <div class="dash-card">
+            <div class="dash-icon">{icone}</div>
+            <div class="dash-label">{titulo}</div>
+            <div class="dash-value">{valor}</div>
+            <div class="dash-desc">{descricao}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
 def show_dashboard() -> None:
     orders = read_table(ORDERS_FILE)
 
@@ -13,174 +27,187 @@ def show_dashboard() -> None:
 
     st.markdown("""
     <style>
+    .dash-hero {
+        background: linear-gradient(135deg, #111827 0%, #000000 45%, #f97316 100%);
+        border-radius: 0 0 28px 28px;
+        padding: 26px 22px 90px;
+        margin: -10px -10px 0 -10px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    }
+
+    .dash-hero::after {
+        content: "🐯";
+        position: absolute;
+        right: -20px;
+        bottom: -40px;
+        font-size: 150px;
+        opacity: .18;
+    }
+
+    .dash-logo, .dash-title, .dash-subtitle {
+        color: white !important;
+    }
+
+    .dash-logo {
+        font-size: 15px;
+        font-weight: 900;
+        margin-bottom: 28px;
+    }
+
+    .dash-title {
+        font-size: 34px;
+        font-weight: 1000;
+    }
+
+    .dash-subtitle {
+        color: #ffedd5 !important;
+        font-size: 15px;
+        font-weight: 800;
+    }
+
     .dash-cards {
+        margin: -60px 10px 24px 10px;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-        margin: 0 0 22px 0;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        position: relative;
+        z-index: 2;
     }
 
     .dash-card {
-        background: #ffffff;
-        border-radius: 18px;
-        padding: 14px 8px;
+        background: white;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 10px 26px rgba(15,23,42,.16);
+        border: 1px solid #fed7aa;
         text-align: center;
-        box-shadow: 0 8px 22px rgba(15,23,42,.14);
-        border: 1px solid #f3f4f6;
-        min-height: 150px;
     }
 
     .dash-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 15px;
-        background: #111111;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        background: #111827;
         color: #f97316 !important;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 10px;
-        font-size: 26px;
-        font-weight: 1000;
+        margin: 0 auto 14px;
+        font-size: 32px;
     }
 
     .dash-label {
         color: #6b7280 !important;
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 1000;
         text-transform: uppercase;
     }
 
     .dash-value {
-        color: #111111 !important;
-        font-size: 19px;
+        color: #111827 !important;
+        font-size: 30px;
         font-weight: 1000;
         margin-top: 8px;
-        line-height: 1.1;
     }
 
     .dash-desc {
         color: #f97316 !important;
-        font-size: 11px;
+        font-size: 14px;
         font-weight: 900;
-        margin-top: 8px;
+        margin-top: 6px;
     }
 
     .orders-title {
-        margin: 8px 0 12px;
-        font-size: 24px;
+        margin: 14px 12px 12px;
+        font-size: 25px;
         font-weight: 1000;
-        color: #111111 !important;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        color: #111827 !important;
     }
 
     .orders-box {
-        background: #ffffff;
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 8px 22px rgba(15,23,42,.12);
+        background: white;
+        margin: 0 10px 20px 10px;
+        border-radius: 22px;
+        padding: 12px;
+        box-shadow: 0 8px 24px rgba(15,23,42,.10);
         border: 1px solid #e5e7eb;
-        margin-bottom: 18px;
     }
 
-    .orders-head {
-        display: grid;
-        grid-template-columns: .8fr 1.7fr 1.4fr 1.5fr;
-        gap: 6px;
-        background: #111111;
-        padding: 14px 10px;
-        font-size: 11px;
-        font-weight: 1000;
-        text-transform: uppercase;
-    }
-
-    .orders-head div {
-        color: #f97316 !important;
-    }
-
-    .orders-row {
-        display: grid;
-        grid-template-columns: .8fr 1.7fr 1.4fr 1.5fr;
-        gap: 6px;
-        padding: 13px 10px;
+    .order-row {
         border-bottom: 1px solid #e5e7eb;
-        font-size: 12px;
-        align-items: center;
+        padding: 13px 4px;
     }
 
-    .orders-row:last-child {
+    .order-row:last-child {
         border-bottom: none;
     }
 
-    .orders-row div {
-        color: #111827 !important;
-        font-weight: 700;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .order-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
     }
 
-    .orders-total {
+    .order-number, .order-total {
         color: #f97316 !important;
-        font-weight: 1000 !important;
+        font-weight: 1000;
+    }
+
+    .order-client {
+        color: #111827 !important;
+        font-weight: 900;
+        font-size: 14px;
+        margin-top: 4px;
+    }
+
+    .order-info {
+        color: #6b7280 !important;
+        font-weight: 700;
+        font-size: 12px;
+        margin-top: 3px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="dash-cards">
-        <div class="dash-card">
-            <div class="dash-icon">📋</div>
-            <div class="dash-label">Pedidos</div>
-            <div class="dash-value">{total_orders}</div>
-            <div class="dash-desc">Total de pedidos</div>
-        </div>
-
-        <div class="dash-card">
-            <div class="dash-icon">💰</div>
-            <div class="dash-label">Vendas</div>
-            <div class="dash-value">{money(total_sales)}</div>
-            <div class="dash-desc">Valor total</div>
-        </div>
-
-        <div class="dash-card">
-            <div class="dash-icon">%</div>
-            <div class="dash-label">Comissão</div>
-            <div class="dash-value">{money(commission)}</div>
-            <div class="dash-desc">Comissão 7%</div>
-        </div>
+    st.markdown("""
+    <div class="dash-hero">
+        <div class="dash-logo">🐯 TIGRÃO DISTRIBUIDORA</div>
+        <div class="dash-title">Dashboard</div>
+        <div class="dash-subtitle">Visão geral da operação</div>
     </div>
     """, unsafe_allow_html=True)
+
+    st.markdown('<div class="dash-cards">', unsafe_allow_html=True)
+    card_dashboard("📋", "Pedidos", total_orders, "Total de pedidos")
+    card_dashboard("💰", "Vendas", money(total_sales), "Valor total de vendas")
+    card_dashboard("%", "Comissão 7%", money(commission), "Valor da comissão")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="orders-title">🕘 Últimos pedidos</div>', unsafe_allow_html=True)
 
     if len(orders):
-        ultimos = orders.tail(10).copy()
+        ultimos = orders.tail(20).copy()
 
-        st.markdown("""
-        <div class="orders-box">
-            <div class="orders-head">
-                <div>Pedido</div>
-                <div>Data</div>
-                <div>Cliente</div>
-                <div>Total</div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="orders-box">', unsafe_allow_html=True)
 
         for _, row in ultimos.iterrows():
             pedido = escape(str(row.get("pedido", "")))
             data = escape(str(row.get("data", "")))
+            vendedor = escape(str(row.get("vendedor", "")))
             cliente = escape(str(row.get("cliente", "")))
-            total = escape(money(row.get("total", 0)))
+            total = money(row.get("total", 0))
 
             st.markdown(f"""
-            <div class="orders-row">
-                <div>{pedido}</div>
-                <div>{data}</div>
-                <div>{cliente}</div>
-                <div class="orders-total">{total}</div>
+            <div class="order-row">
+                <div class="order-top">
+                    <div class="order-number">Pedido #{pedido}</div>
+                    <div class="order-total">{total}</div>
+                </div>
+                <div class="order-client">{cliente}</div>
+                <div class="order-info">{data} • {vendedor}</div>
             </div>
             """, unsafe_allow_html=True)
 
