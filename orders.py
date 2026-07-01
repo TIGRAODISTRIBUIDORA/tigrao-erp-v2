@@ -131,50 +131,72 @@ def _mobile_css_orders():
     st.markdown("""
     <style>
     .pedido-box {
-        background: #ffffff;
-        border-radius: 22px;
-        padding: 16px;
-        margin: 10px 10px 16px 10px;
-        box-shadow: 0 6px 18px rgba(15,23,42,.10);
-        border: 1px solid #e5e7eb;
+        background: #ffffff !important;
+        border-radius: 22px !important;
+        padding: 16px !important;
+        margin: 10px 10px 16px 10px !important;
+        box-shadow: 0 6px 18px rgba(15,23,42,.10) !important;
+        border: 1px solid #e5e7eb !important;
     }
 
     .pedido-titulo {
-        font-size: 22px;
-        font-weight: 1000;
+        font-size: 22px !important;
+        font-weight: 1000 !important;
         color: #111827 !important;
-        margin-bottom: 14px;
+        margin-bottom: 14px !important;
+    }
+
+    .produto-card,
+    .produto-card * {
+        background: #ffffff !important;
+        color: #111827 !important;
     }
 
     .produto-card {
-        background: #fff7ed;
-        border: 2px solid #fed7aa;
-        border-radius: 18px;
-        padding: 14px;
-        margin: 12px 0;
+        border: 2px solid #f97316 !important;
+        border-radius: 18px !important;
+        padding: 14px !important;
+        margin: 12px 0 !important;
+        box-shadow: 0 6px 16px rgba(15,23,42,.12) !important;
     }
 
     .produto-nome {
-        font-size: 16px;
-        font-weight: 1000;
+        font-size: 16px !important;
+        font-weight: 1000 !important;
         color: #111827 !important;
-        margin-bottom: 6px;
+        margin-bottom: 6px !important;
     }
 
     .produto-info {
-        font-size: 13px;
+        font-size: 13px !important;
         color: #475569 !important;
-        font-weight: 800;
-        line-height: 1.5;
+        font-weight: 800 !important;
+        line-height: 1.5 !important;
+    }
+
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: 260px !important;
+        object-fit: contain !important;
+        border-radius: 18px !important;
+        display: block !important;
+        margin: 10px auto !important;
+    }
+
+    div[data-baseweb="select"] span {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 
     .total-box {
-        background: #0b8de3;
-        border-radius: 18px;
-        padding: 16px;
-        text-align: center;
-        margin: 14px 0;
-        box-shadow: 0 6px 16px rgba(11,141,227,.25);
+        background: #0b8de3 !important;
+        border-radius: 18px !important;
+        padding: 16px !important;
+        text-align: center !important;
+        margin: 14px 0 !important;
+        box-shadow: 0 6px 16px rgba(11,141,227,.25) !important;
     }
 
     .total-box div {
@@ -182,62 +204,62 @@ def _mobile_css_orders():
     }
 
     .total-label {
-        font-size: 12px;
-        font-weight: 900;
-        opacity: .9;
+        font-size: 12px !important;
+        font-weight: 900 !important;
+        opacity: .9 !important;
     }
 
     .total-valor {
-        font-size: 28px;
-        font-weight: 1000;
-        margin-top: 4px;
+        font-size: 28px !important;
+        font-weight: 1000 !important;
+        margin-top: 4px !important;
     }
 
     .cart-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        padding: 14px;
-        margin: 12px 10px;
-        box-shadow: 0 4px 14px rgba(15,23,42,.08);
+        background: #ffffff !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 18px !important;
+        padding: 14px !important;
+        margin: 12px 10px !important;
+        box-shadow: 0 4px 14px rgba(15,23,42,.08) !important;
     }
 
     .cart-title {
         color: #0b8de3 !important;
-        font-size: 16px;
-        font-weight: 1000;
-        margin-bottom: 6px;
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+        margin-bottom: 6px !important;
     }
 
     .cart-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: 10px;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        margin-top: 10px !important;
     }
 
     .cart-mini {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 9px;
-        border: 1px solid #e5e7eb;
-        font-size: 12px;
-        font-weight: 800;
+        background: #f8fafc !important;
+        border-radius: 12px !important;
+        padding: 9px !important;
+        border: 1px solid #e5e7eb !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
         color: #475569 !important;
     }
 
     .cart-mini b {
-        display: block;
-        font-size: 14px;
+        display: block !important;
+        font-size: 14px !important;
         color: #111827 !important;
-        margin-top: 3px;
+        margin-top: 3px !important;
     }
 
     .resumo-pedido {
-        background: #111827;
-        border-radius: 20px;
-        padding: 16px;
-        margin: 10px;
+        background: #111827 !important;
+        border-radius: 20px !important;
+        padding: 16px !important;
+        margin: 10px !important;
     }
 
     .resumo-pedido span {
@@ -245,17 +267,17 @@ def _mobile_css_orders():
     }
 
     .resumo-linha {
-        display: flex;
-        justify-content: space-between;
-        font-weight: 900;
-        margin-bottom: 8px;
+        display: flex !important;
+        justify-content: space-between !important;
+        font-weight: 900 !important;
+        margin-bottom: 8px !important;
     }
 
     .resumo-total {
-        border-top: 1px solid rgba(255,255,255,.25);
-        padding-top: 10px;
-        margin-top: 10px;
-        font-size: 20px;
+        border-top: 1px solid rgba(255,255,255,.25) !important;
+        padding-top: 10px !important;
+        margin-top: 10px !important;
+        font-size: 20px !important;
     }
 
     div.stButton > button {
