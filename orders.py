@@ -233,18 +233,6 @@ def _mobile_css_orders():
         color: #111827 !important;
     }
 
-    .cart-row {
-        display: grid !important;
-        grid-template-columns: 42px 1fr 48px 70px 58px 80px !important;
-        gap: 6px !important;
-        align-items: center !important;
-        padding: 9px 4px !important;
-        border-bottom: 1px solid #e5e7eb !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        color: #111827 !important;
-    }
-
     .cart-product {
         color: #0b8de3 !important;
         font-weight: 1000 !important;
@@ -257,11 +245,6 @@ def _mobile_css_orders():
         color: #64748b !important;
         font-weight: 800 !important;
         margin-top: 3px !important;
-    }
-
-    .trash-btn {
-        text-align: center !important;
-        font-size: 20px !important;
     }
 
     .cart-value {
@@ -311,6 +294,9 @@ def show_new_order() -> None:
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = []
 
+    if "pedido_form_key" not in st.session_state:
+        st.session_state.pedido_form_key = 0
+
     seller = st.session_state.get("vendedor", "")
 
     if len(products) == 0:
@@ -330,7 +316,7 @@ def show_new_order() -> None:
     supplier = st.selectbox(
         "Fornecedor",
         _supplier_options(products),
-        key="novo_pedido_fornecedor_mobile"
+        key=f"novo_pedido_fornecedor_mobile_{st.session_state.pedido_form_key}"
     )
 
     filtered_products = _filter_by_supplier(products, supplier)
@@ -338,7 +324,7 @@ def show_new_order() -> None:
     selected_text = st.selectbox(
         "Produto",
         _product_options(filtered_products),
-        key=f"novo_pedido_produto_mobile_{supplier}",
+        key=f"novo_pedido_produto_mobile_{supplier}_{st.session_state.pedido_form_key}",
     )
 
     product = _get_product_from_option(filtered_products, selected_text)
@@ -365,7 +351,7 @@ def show_new_order() -> None:
         min_value=0,
         value=0,
         step=1,
-        key="novo_pedido_quantidade_mobile"
+        key=f"novo_pedido_quantidade_mobile_{st.session_state.pedido_form_key}"
     )
 
     discount = st.number_input(
@@ -373,7 +359,7 @@ def show_new_order() -> None:
         min_value=0.0,
         value=0.0,
         step=1.0,
-        key="novo_pedido_desconto_mobile"
+        key=f"novo_pedido_desconto_mobile_{st.session_state.pedido_form_key}"
     )
 
     price = _safe_float(product.get("preco", 0)) if product else 0
@@ -394,6 +380,7 @@ def show_new_order() -> None:
             st.warning("Informe a quantidade antes de adicionar.")
         else:
             _add_item_to_cart(product, quantity, discount)
+            st.session_state.pedido_form_key += 1
             st.success("Produto adicionado ao carrinho.")
             time.sleep(0.3)
             st.rerun()
@@ -456,7 +443,10 @@ def show_new_order() -> None:
                 )
 
             with col_preco:
-                st.markdown(f"<div class='cart-value'>{money(preco)}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div class='cart-value'>{money(preco)}</div>",
+                    unsafe_allow_html=True
+                )
 
             with col_desc:
                 novo_desc = st.number_input(
@@ -469,7 +459,10 @@ def show_new_order() -> None:
                 )
 
             with col_total:
-                st.markdown(f"<div class='cart-value'>{money(total)}</div>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<div class='cart-value'>{money(total)}</div>",
+                    unsafe_allow_html=True
+                )
 
             if nova_qtd != quantidade or novo_desc != desconto:
                 st.session_state.carrinho[i]["quantidade"] = nova_qtd
@@ -523,6 +516,7 @@ def show_new_order() -> None:
             save_table(orders, ORDERS_FILE)
 
             st.session_state.carrinho = []
+            st.session_state.pedido_form_key += 1
 
             st.success(f"Pedido nº {number} salvo com sucesso!")
             time.sleep(0.8)
@@ -530,6 +524,7 @@ def show_new_order() -> None:
 
     if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
         st.session_state.carrinho = []
+        st.session_state.pedido_form_key += 1
         st.rerun()
 
 
