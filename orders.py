@@ -130,22 +130,6 @@ def _add_item_to_cart(product, quantity, discount):
 def _mobile_css_orders():
     st.markdown("""
     <style>
-    .pedido-box {
-        background: #ffffff !important;
-        border-radius: 22px !important;
-        padding: 16px !important;
-        margin: 10px 10px 16px 10px !important;
-        box-shadow: 0 6px 18px rgba(15,23,42,.10) !important;
-        border: 1px solid #e5e7eb !important;
-    }
-
-    .pedido-titulo {
-        font-size: 22px !important;
-        font-weight: 1000 !important;
-        color: #111827 !important;
-        margin-bottom: 14px !important;
-    }
-
     .produto-card,
     .produto-card * {
         background: #ffffff !important;
@@ -220,7 +204,7 @@ def _mobile_css_orders():
         border: 1px solid #e5e7eb !important;
         border-radius: 18px !important;
         padding: 14px !important;
-        margin: 12px 10px !important;
+        margin: 12px 0 !important;
         box-shadow: 0 4px 14px rgba(15,23,42,.08) !important;
     }
 
@@ -259,7 +243,7 @@ def _mobile_css_orders():
         background: #111827 !important;
         border-radius: 20px !important;
         padding: 16px !important;
-        margin: 10px !important;
+        margin: 10px 0 !important;
     }
 
     .resumo-pedido span {
@@ -303,8 +287,7 @@ def show_new_order() -> None:
         st.warning("Nenhum produto cadastrado.")
         return
 
-    st.markdown('<div class="pedido-box">', unsafe_allow_html=True)
-    st.markdown('<div class="pedido-titulo">🛒 Novo Pedido</div>', unsafe_allow_html=True)
+    st.markdown("## 🛒 Novo Pedido")
 
     client_list = (
         clients["cliente"].astype(str).tolist()
@@ -385,11 +368,7 @@ def show_new_order() -> None:
             time.sleep(0.3)
             st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="pedido-box">', unsafe_allow_html=True)
-    st.markdown('<div class="pedido-titulo">📦 Carrinho</div>', unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("## 📦 Carrinho")
 
     if len(st.session_state.carrinho) == 0:
         st.info("Nenhum produto adicionado ao pedido.")
