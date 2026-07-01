@@ -16,22 +16,18 @@ def login_screen() -> None:
 
     st.markdown("""
     <style>
-    .login-bg {
-        min-height: 100vh;
-        background: linear-gradient(180deg, #111827 0%, #000000 45%, #f97316 100%);
-        margin: -10px;
-        padding: 38px 18px;
-        position: relative;
-        overflow: hidden;
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(180deg, #111827 0%, #000000 45%, #f97316 100%) !important;
     }
 
-    .login-bg::after {
-        content: "🐯";
-        position: absolute;
-        right: -35px;
-        bottom: -50px;
-        font-size: 190px;
-        opacity: .14;
+    .block-container {
+        max-width: 430px !important;
+        padding: 35px 18px !important;
+        margin: auto !important;
+    }
+
+    header, footer {
+        display: none !important;
     }
 
     .login-logo {
@@ -40,7 +36,7 @@ def login_screen() -> None:
         font-size: 34px;
         font-weight: 1000;
         line-height: 1.15;
-        margin-top: 20px;
+        margin-bottom: 8px;
     }
 
     .login-sub {
@@ -48,44 +44,25 @@ def login_screen() -> None:
         color: #ffedd5 !important;
         font-size: 16px;
         font-weight: 800;
-        margin-top: 10px;
-        margin-bottom: 28px;
+        margin-bottom: 26px;
     }
 
-    .login-card {
+    .login-card-title {
+        text-align: center;
         background: white;
-        border-radius: 26px;
-        padding: 24px;
-        box-shadow: 0 14px 34px rgba(0,0,0,.30);
-        border: 2px solid #fed7aa;
-        max-width: 380px;
-        margin: 0 auto;
-        position: relative;
-        z-index: 2;
-    }
-
-    .login-title {
         color: #111827 !important;
+        padding: 18px;
+        border-radius: 22px;
         font-size: 22px;
         font-weight: 1000;
-        text-align: center;
         margin-bottom: 18px;
+        box-shadow: 0 8px 24px rgba(0,0,0,.25);
+        border: 2px solid #fed7aa;
     }
 
-    div.stButton > button {
-        background: linear-gradient(135deg, #f97316, #ea580c) !important;
+    label {
         color: white !important;
-        border-radius: 18px !important;
-        min-height: 58px !important;
-        font-size: 16px !important;
-        font-weight: 1000 !important;
-        border: none !important;
-        box-shadow: 0 7px 18px rgba(249,115,22,.35);
-    }
-
-    div.stButton > button:active {
-        background: #22c55e !important;
-        transform: scale(.96);
+        font-weight: 900 !important;
     }
 
     input {
@@ -97,21 +74,39 @@ def login_screen() -> None:
         font-size: 16px !important;
     }
 
-    label {
-        color: #111827 !important;
-        font-weight: 900 !important;
+    div.stButton > button {
+        width: 100%;
+        background: linear-gradient(135deg, #f97316, #ea580c) !important;
+        color: white !important;
+        border-radius: 18px !important;
+        min-height: 58px !important;
+        font-size: 16px !important;
+        font-weight: 1000 !important;
+        border: none !important;
+        box-shadow: 0 7px 18px rgba(249,115,22,.35);
+        transition: all .12s ease-in-out !important;
     }
 
-    .login-card * {
-        color: #111827 !important;
+    div.stButton > button:hover {
+        background: #ea580c !important;
+        transform: translateY(-1px);
+    }
+
+    div.stButton > button:active {
+        background: #22c55e !important;
+        transform: scale(.96);
+    }
+
+    .stAlert {
+        border-radius: 16px !important;
     }
     </style>
+    """, unsafe_allow_html=True)
 
-    <div class="login-bg">
-        <div class="login-logo">🐯 TIGRÃO<br>DISTRIBUIDORA</div>
-        <div class="login-sub">Sistema profissional de pedidos</div>
-        <div class="login-card">
-            <div class="login-title">Acesso ao sistema</div>
+    st.markdown("""
+    <div class="login-logo">🐯 TIGRÃO<br>DISTRIBUIDORA</div>
+    <div class="login-sub">Sistema profissional de pedidos</div>
+    <div class="login-card-title">Acesso ao sistema</div>
     """, unsafe_allow_html=True)
 
     usuario = st.text_input("Usuário")
@@ -138,11 +133,6 @@ def login_screen() -> None:
                 st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
-
-    st.markdown("""
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     st.stop()
 
