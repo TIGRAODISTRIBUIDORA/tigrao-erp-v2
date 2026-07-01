@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="Tigrão V2",
     page_icon="🐯",
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
 
 PASTA_DADOS = "dados"
@@ -28,24 +28,24 @@ COMISSAO_PADRAO = 0.07
 def criar_banco():
     os.makedirs(PASTA_DADOS, exist_ok=True)
 
-    if not os.path.exists(ARQ_USUARIOS):
-        usuarios = pd.DataFrame([
-            {
-                "usuario": "admin",
-                "senha": "admin123",
-                "nome": "Administrador",
-                "perfil": "ADMIN",
-                "comissao": 0.07,
-            },
-            {
-                "usuario": "vendedor",
-                "senha": "123",
-                "nome": "Vendedor",
-                "perfil": "VENDEDOR",
-                "comissao": 0.07,
-            },
-        ])
-        usuarios.to_excel(ARQ_USUARIOS, index=False)
+    usuarios = pd.DataFrame([
+        {
+            "usuario": "admin",
+            "senha": "admin123",
+            "nome": "Administrador",
+            "perfil": "ADMIN",
+            "comissao": 0.07,
+        },
+        {
+            "usuario": "vendedor",
+            "senha": "123",
+            "nome": "Vendedor",
+            "perfil": "VENDEDOR",
+            "comissao": 0.07,
+        },
+    ])
+
+    usuarios.to_excel(ARQ_USUARIOS, index=False)
 
     if not os.path.exists(ARQ_CLIENTES):
         clientes = pd.DataFrame([
@@ -91,10 +91,15 @@ def dinheiro(valor):
 
 def numero_pedido():
     pedidos = ler_excel(ARQ_PEDIDOS)
+
     if len(pedidos) == 0 or "pedido" not in pedidos.columns:
         return 1
+
     try:
-        return int(pd.to_numeric(pedidos["pedido"], errors="coerce").max()) + 1
+        maior = pd.to_numeric(pedidos["pedido"], errors="coerce").max()
+        if pd.isna(maior):
+            return 1
+        return int(maior) + 1
     except Exception:
         return 1
 
@@ -110,13 +115,13 @@ def css():
         display:none !important;
     }
 
-    .block-container {
-        max-width: 980px !important;
-        padding: 0 0 110px 0 !important;
-    }
-
     [data-testid="stAppViewContainer"] {
         background: #f4f5f7 !important;
+    }
+
+    .block-container {
+        max-width: 980px !important;
+        padding: 0 0 115px 0 !important;
     }
 
     * {
@@ -197,7 +202,7 @@ def css():
         color: #111;
         font-size: 22px;
         margin: 12px 0 0 0;
-        font-weight: 500;
+        font-weight: 600;
     }
 
     .conteudo {
@@ -271,6 +276,14 @@ def css():
         margin-bottom: 14px;
     }
 
+    .box {
+        background: white;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 8px 24px rgba(15,23,42,.10);
+        margin-bottom: 18px;
+    }
+
     .tabela-box {
         background: white;
         border-radius: 22px;
@@ -321,20 +334,13 @@ def css():
         font-size: 13px;
     }
 
-    .box {
-        background: white;
-        border-radius: 24px;
-        padding: 22px;
-        box-shadow: 0 8px 24px rgba(15,23,42,.10);
-        margin-bottom: 18px;
-    }
-
     .produto-card {
         border: 2px solid #ff8500;
         border-radius: 18px;
         padding: 14px;
         margin: 12px 0;
         background: white;
+        font-weight: 800;
     }
 
     .produto-card b {
@@ -353,12 +359,14 @@ def css():
     .total-item .label {
         font-size: 13px;
         font-weight: 900;
+        color: white;
     }
 
     .total-item .valor {
         font-size: 34px;
         font-weight: 1000;
         margin-top: 8px;
+        color: white;
     }
 
     .resumo {
@@ -367,6 +375,10 @@ def css():
         border-radius: 22px;
         padding: 18px;
         margin-top: 16px;
+    }
+
+    .resumo * {
+        color: white !important;
     }
 
     .resumo-linha {
@@ -414,6 +426,7 @@ def css():
         color: white !important;
         box-shadow: none !important;
         font-size: 13px !important;
+        padding: 4px !important;
     }
 
     input, textarea {
@@ -531,31 +544,40 @@ def login():
     </div>
     """, unsafe_allow_html=True)
 
-    with st.container():
-        usuario = st.text_input("Usuário")
-        senha = st.text_input("Senha", type="password")
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
 
-        if st.button("ENTRAR", use_container_width=True):
-            usuarios = ler_excel(ARQ_USUARIOS)
+    if st.button("ENTRAR", use_container_width=True):
+        usuarios = ler_excel(ARQ_USUARIOS)
 
-            achou = usuarios[
-                (usuarios["usuario"].astype(str) == usuario) &
-                (usuarios["senha"].astype(str) == senha)
-            ]
+        if len(usuarios) == 0:
+            st.error("Base de usuários não encontrada.")
+            st.stop()
 
-            if len(achou) == 0:
-                st.error("Usuário ou senha inválidos.")
-            else:
-                user = achou.iloc[0]
-                st.session_state.logado = True
-                st.session_state.usuario = str(user["usuario"])
-                st.session_state.nome = str(user["nome"])
-                st.session_state.perfil = str(user["perfil"]).upper()
-                st.session_state.comissao = float(user.get("comissao", COMISSAO_PADRAO))
-                st.session_state.menu = "Dashboard"
-                st.session_state.carrinho = []
-                st.session_state.form_key = 0
-                st.rerun()
+        usuarios["usuario"] = usuarios["usuario"].astype(str).str.strip().str.lower()
+        usuarios["senha"] = usuarios["senha"].astype(str).str.strip()
+
+        usuario_digitado = usuario.strip().lower()
+        senha_digitada = senha.strip()
+
+        achou = usuarios[
+            (usuarios["usuario"] == usuario_digitado) &
+            (usuarios["senha"] == senha_digitada)
+        ]
+
+        if len(achou) == 0:
+            st.error("Usuário ou senha inválidos.")
+        else:
+            user = achou.iloc[0]
+            st.session_state.logado = True
+            st.session_state.usuario = str(user["usuario"])
+            st.session_state.nome = str(user["nome"])
+            st.session_state.perfil = str(user["perfil"]).upper()
+            st.session_state.comissao = float(user.get("comissao", COMISSAO_PADRAO))
+            st.session_state.menu = "Dashboard"
+            st.session_state.carrinho = []
+            st.session_state.form_key = 0
+            st.rerun()
 
     st.stop()
 
@@ -602,22 +624,13 @@ def mudar_menu(nome):
 def menu_inferior():
     st.markdown('<div class="bottom-nav">', unsafe_allow_html=True)
 
-    if st.session_state.get("perfil") == "ADMIN":
-        itens = [
-            ("Dashboard", "🏠 Dashboard"),
-            ("Novo Pedido", "🛒 Novo"),
-            ("Pedidos", "📋 Pedidos"),
-            ("Comissão", "💰 Comissão"),
-            ("Mais", "⋯ Mais"),
-        ]
-    else:
-        itens = [
-            ("Dashboard", "🏠 Dashboard"),
-            ("Novo Pedido", "🛒 Novo"),
-            ("Pedidos", "📋 Pedidos"),
-            ("Comissão", "💰 Comissão"),
-            ("Mais", "⋯ Mais"),
-        ]
+    itens = [
+        ("Dashboard", "🏠 Dashboard"),
+        ("Novo Pedido", "🛒 Novo"),
+        ("Pedidos", "📋 Pedidos"),
+        ("Comissão", "💰 Comissão"),
+        ("Mais", "⋯ Mais"),
+    ]
 
     cols = st.columns(len(itens))
 
@@ -626,19 +639,35 @@ def menu_inferior():
             if st.button(texto, key=f"nav_{destino}", use_container_width=True):
                 mudar_menu(destino)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # =========================
 # TELAS
 # =========================
 
+def resumo_pedidos(pedidos):
+    colunas = ["pedido", "data", "vendedor", "cliente", "total", "status"]
+
+    if len(pedidos) == 0 or "pedido" not in pedidos.columns:
+        return pd.DataFrame(columns=colunas)
+
+    agrupado = pedidos.groupby("pedido", as_index=False).agg({
+        "data": "first",
+        "vendedor": "first",
+        "cliente": "first",
+        "total": "sum",
+        "status": "first",
+    })
+
+    return agrupado
+
+
 def dashboard():
     topo("Dashboard", "Visão geral da operação")
     abrir()
 
     pedidos = ler_excel(ARQ_PEDIDOS)
-
     vendedor = st.session_state.get("nome", "")
     perfil = st.session_state.get("perfil", "VENDEDOR")
 
@@ -708,24 +737,9 @@ def dashboard():
             </div>
             """, unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     fechar()
-
-
-def resumo_pedidos(pedidos):
-    if len(pedidos) == 0:
-        return pd.DataFrame(columns=["pedido", "data", "vendedor", "cliente", "total", "status"])
-
-    agrupado = pedidos.groupby("pedido", as_index=False).agg({
-        "data": "first",
-        "vendedor": "first",
-        "cliente": "first",
-        "total": "sum",
-        "status": "first",
-    })
-
-    return agrupado
 
 
 def novo_pedido():
@@ -741,114 +755,115 @@ def novo_pedido():
     if "form_key" not in st.session_state:
         st.session_state.form_key = 0
 
-    with st.container():
-        st.markdown('<div class="box">', unsafe_allow_html=True)
+    st.markdown('<div class="box">', unsafe_allow_html=True)
 
-        lista_clientes = clientes["cliente"].astype(str).tolist() if len(clientes) else ["CLIENTE PADRÃO"]
+    lista_clientes = clientes["cliente"].astype(str).tolist() if len(clientes) else ["CLIENTE PADRÃO"]
 
-        cliente = st.selectbox(
-            "Cliente",
-            lista_clientes,
-            key="cliente_pedido"
-        )
+    cliente = st.selectbox(
+        "Cliente",
+        lista_clientes,
+        key="cliente_pedido"
+    )
 
-        fornecedores = ["Todos"] + sorted(
+    fornecedores = ["Todos"]
+
+    if len(produtos) and "fornecedor" in produtos.columns:
+        fornecedores += sorted(
             produtos["fornecedor"].fillna("").astype(str).replace("", pd.NA).dropna().unique().tolist()
         )
 
-        fornecedor = st.selectbox(
-            "Fornecedor",
-            fornecedores,
-            key="fornecedor_pedido"
+    fornecedor = st.selectbox(
+        "Fornecedor",
+        fornecedores,
+        key="fornecedor_pedido"
+    )
+
+    if fornecedor != "Todos":
+        produtos_filtrados = produtos[produtos["fornecedor"].astype(str) == fornecedor].copy()
+    else:
+        produtos_filtrados = produtos.copy()
+
+    opcoes_produtos = ["Selecione o produto"]
+
+    for _, row in produtos_filtrados.iterrows():
+        opcoes_produtos.append(
+            f'{row["codigo"]} - {row["produto"]} | {dinheiro(row["preco"])}'
         )
 
-        if fornecedor != "Todos":
-            produtos_filtrados = produtos[produtos["fornecedor"].astype(str) == fornecedor].copy()
-        else:
-            produtos_filtrados = produtos.copy()
+    produto_txt = st.selectbox(
+        "Produto",
+        opcoes_produtos,
+        key=f"produto_pedido_{st.session_state.form_key}"
+    )
 
-        opcoes_produtos = ["Selecione o produto"]
+    produto = None
 
-        for _, row in produtos_filtrados.iterrows():
-            opcoes_produtos.append(
-                f'{row["codigo"]} - {row["produto"]} | {dinheiro(row["preco"])}'
-            )
+    if produto_txt != "Selecione o produto":
+        idx = opcoes_produtos.index(produto_txt) - 1
+        produto = produtos_filtrados.iloc[idx].to_dict()
 
-        produto_txt = st.selectbox(
-            "Produto",
-            opcoes_produtos,
-            key=f"produto_pedido_{st.session_state.form_key}"
-        )
-
-        produto = None
-
-        if produto_txt != "Selecione o produto":
-            idx = opcoes_produtos.index(produto_txt) - 1
-            produto = produtos_filtrados.iloc[idx].to_dict()
-
-        if produto:
-            st.markdown(f"""
-            <div class="produto-card">
-                <b>{produto["produto"]}</b><br>
-                Código: {produto["codigo"]}<br>
-                Fornecedor: {produto["fornecedor"]}<br>
-                Preço: <b>{dinheiro(produto["preco"])}</b>
-            </div>
-            """, unsafe_allow_html=True)
-
-        qtd = st.number_input(
-            "Quantidade",
-            min_value=0,
-            value=0,
-            step=1,
-            key=f"qtd_pedido_{st.session_state.form_key}"
-        )
-
-        desc = st.number_input(
-            "% Desconto",
-            min_value=0.0,
-            value=0.0,
-            step=1.0,
-            key=f"desc_pedido_{st.session_state.form_key}"
-        )
-
-        preco = float(produto["preco"]) if produto else 0
-        subtotal = preco * qtd
-        total = subtotal - (subtotal * desc / 100)
-
+    if produto:
         st.markdown(f"""
-        <div class="total-item">
-            <div class="label">TOTAL DO ITEM</div>
-            <div class="valor">{dinheiro(total)}</div>
+        <div class="produto-card">
+            <b>{produto["produto"]}</b><br>
+            Código: {produto["codigo"]}<br>
+            Fornecedor: {produto["fornecedor"]}<br>
+            Preço: <b>{dinheiro(produto["preco"])}</b>
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("➕ ADICIONAR AO CARRINHO", use_container_width=True):
-            if not produto:
-                st.warning("Selecione um produto.")
-            elif qtd <= 0:
-                st.warning("Informe a quantidade.")
-            else:
-                st.session_state.carrinho.append({
-                    "codigo": produto["codigo"],
-                    "produto": produto["produto"],
-                    "un": produto.get("un", "UN"),
-                    "quantidade": qtd,
-                    "preco": preco,
-                    "desconto": desc,
-                    "subtotal": subtotal,
-                    "total": total,
-                })
+    qtd = st.number_input(
+        "Quantidade",
+        min_value=0,
+        value=0,
+        step=1,
+        key=f"qtd_pedido_{st.session_state.form_key}"
+    )
 
-                st.session_state.form_key += 1
-                st.success("Produto adicionado.")
-                time.sleep(0.3)
-                st.rerun()
+    desc = st.number_input(
+        "% Desconto",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        key=f"desc_pedido_{st.session_state.form_key}"
+    )
 
-        st.markdown('</div>', unsafe_allow_html=True)
+    preco = float(produto["preco"]) if produto else 0
+    subtotal = preco * qtd
+    total = subtotal - (subtotal * desc / 100)
+
+    st.markdown(f"""
+    <div class="total-item">
+        <div class="label">TOTAL DO ITEM</div>
+        <div class="valor">{dinheiro(total)}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("➕ ADICIONAR AO CARRINHO", use_container_width=True):
+        if not produto:
+            st.warning("Selecione um produto.")
+        elif qtd <= 0:
+            st.warning("Informe a quantidade.")
+        else:
+            st.session_state.carrinho.append({
+                "codigo": produto["codigo"],
+                "produto": produto["produto"],
+                "un": produto.get("un", "UN"),
+                "quantidade": qtd,
+                "preco": preco,
+                "desconto": desc,
+                "subtotal": subtotal,
+                "total": total,
+            })
+
+            st.session_state.form_key += 1
+            st.success("Produto adicionado.")
+            time.sleep(0.3)
+            st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
     carrinho(cliente)
-
     fechar()
 
 
@@ -880,7 +895,10 @@ def carrinho(cliente):
                 st.rerun()
 
         with col2:
-            st.markdown(f"**{item['produto']}**  \n<small>Cód: {item['codigo']}</small>", unsafe_allow_html=True)
+            st.markdown(
+                f"**{item['produto']}**  \n<small>Cód: {item['codigo']}</small>",
+                unsafe_allow_html=True
+            )
 
         with col3:
             st.write(int(item["quantidade"]))
@@ -889,11 +907,14 @@ def carrinho(cliente):
             st.write(dinheiro(item["preco"]))
 
         with col5:
-            st.markdown(f"<b style='color:#ff8500'>{dinheiro(item['total'])}</b>", unsafe_allow_html=True)
+            st.markdown(
+                f"<b style='color:#ff8500'>{dinheiro(item['total'])}</b>",
+                unsafe_allow_html=True
+            )
 
         st.divider()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     subtotal = sum([x["subtotal"] for x in st.session_state.carrinho])
     total = sum([x["total"] for x in st.session_state.carrinho])
@@ -953,7 +974,6 @@ def pedidos_tela():
     abrir()
 
     pedidos = ler_excel(ARQ_PEDIDOS)
-
     vendedor = st.session_state.get("nome", "")
     perfil = st.session_state.get("perfil", "VENDEDOR")
 
@@ -970,22 +990,25 @@ def pedidos_tela():
     for _, row in resumo.iterrows():
         status = str(row["status"]).upper()
 
-        with st.container():
-            st.markdown(f"""
-            <div class="box">
-                <b>Pedido #{row["pedido"]}</b><br>
-                Cliente: {row["cliente"]}<br>
-                Data: {row["data"]}<br>
-                Total: <b style="color:#ff8500">{dinheiro(row["total"])}</b><br>
-                Status: <b>{status}</b>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="box">
+            <b>Pedido #{row["pedido"]}</b><br>
+            Cliente: {row["cliente"]}<br>
+            Data: {row["data"]}<br>
+            Total: <b style="color:#ff8500">{dinheiro(row["total"])}</b><br>
+            Status: <b>{status}</b>
+        </div>
+        """, unsafe_allow_html=True)
 
-            if status == "PENDENTE":
-                if st.button(f"✏️ Editar pedido {row['pedido']}", key=f"edit_{row['pedido']}", use_container_width=True):
-                    st.session_state.pedido_editando = int(row["pedido"])
-                    st.session_state.menu = "Editar Pedido"
-                    st.rerun()
+        if status == "PENDENTE":
+            if st.button(
+                f"✏️ Editar pedido {row['pedido']}",
+                key=f"edit_{row['pedido']}",
+                use_container_width=True
+            ):
+                st.session_state.pedido_editando = int(row["pedido"])
+                st.session_state.menu = "Editar Pedido"
+                st.rerun()
 
     fechar()
 
@@ -1053,6 +1076,10 @@ def editar_pedido():
         st.divider()
 
     if st.button("💾 SALVAR ALTERAÇÕES", use_container_width=True):
+        if len(novos) == 0:
+            st.warning("Não é possível salvar pedido sem itens.")
+            return
+
         pedidos = pedidos[pedidos["pedido"] != numero]
         pedidos = pd.concat([pedidos, pd.DataFrame(novos)], ignore_index=True)
         salvar_excel(pedidos, ARQ_PEDIDOS)
@@ -1076,7 +1103,7 @@ def comissao_tela():
     pedidos = ler_excel(ARQ_PEDIDOS)
     vendedor = st.session_state.get("nome", "")
 
-    if len(pedidos):
+    if len(pedidos) and st.session_state.get("perfil") != "ADMIN":
         pedidos = pedidos[pedidos["vendedor"].astype(str) == vendedor].copy()
 
     vendas = pedidos["total"].sum() if len(pedidos) else 0
@@ -1117,7 +1144,7 @@ def mais_tela():
     st.markdown('<div class="box">', unsafe_allow_html=True)
     st.write(f"**Usuário:** {st.session_state.get('nome')}")
     st.write(f"**Perfil:** {st.session_state.get('perfil')}")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if st.button("🚪 SAIR", use_container_width=True):
         st.session_state.clear()
