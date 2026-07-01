@@ -373,22 +373,39 @@ def show_new_order() -> None:
         total_general = cart["total"].sum()
         discount_general = subtotal_general - total_general
 
-        for i, item in enumerate(st.session_state.carrinho):
-            st.markdown(
-                f"""
-                <div class="cart-card">
-                    <div class="cart-title">{item["produto"]}</div>
-                    <div class="produto-info">Código: {item["codigo"]} | Unidade: {item["un"]}</div>
+        html = f"""
+<div class="cart-card">
+    <div class="cart-title">{item["produto"]}</div>
 
-                    <div class="cart-grid">
-                        <div class="cart-mini">Qtd<b>{item["quantidade"]}</b></div>
-                        <div class="cart-mini">Preço<b>{money(item["preco"])}</b></div>
-                        <div class="cart-mini">Desconto<b>{item["desconto"]:.2f}%</b></div>
-                        <div class="cart-mini">Total<b>{money(item["total"])}</b></div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
+    <div class="produto-info">
+        Código: {item["codigo"]} | Unidade: {item["un"]}
+    </div>
+
+    <div class="cart-grid">
+        <div class="cart-mini">
+            Qtd
+            <b>{item["quantidade"]}</b>
+        </div>
+
+        <div class="cart-mini">
+            Preço
+            <b>{money(item["preco"])}</b>
+        </div>
+
+        <div class="cart-mini">
+            Desconto
+            <b>{item["desconto"]:.2f}%</b>
+        </div>
+
+        <div class="cart-mini">
+            Total
+            <b>{money(item["total"])}</b>
+        </div>
+    </div>
+</div>
+"""
+
+st.markdown(html, unsafe_allow_html=True)
             )
 
             if st.button(
