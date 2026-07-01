@@ -24,16 +24,15 @@ def _safe_float(value):
 
 
 def _prepare_products(products):
-    if "codigo" not in products.columns:
-        products["codigo"] = ""
-    if "produto" not in products.columns:
-        products["produto"] = ""
-    if "un" not in products.columns:
-        products["un"] = "UN"
-    if "preco" not in products.columns:
-        products["preco"] = 0
-    if "fornecedor" not in products.columns:
-        products["fornecedor"] = ""
+    for col, default in {
+        "codigo": "",
+        "produto": "",
+        "un": "UN",
+        "preco": 0,
+        "fornecedor": "",
+    }.items():
+        if col not in products.columns:
+            products[col] = default
 
     products["codigo"] = products["codigo"].astype(str).str.strip()
     products["produto"] = products["produto"].astype(str).str.strip()
@@ -42,17 +41,13 @@ def _prepare_products(products):
     products["preco"] = pd.to_numeric(products["preco"], errors="coerce").fillna(0)
 
     products = products[products["produto"] != ""]
-    products = products.drop_duplicates(
+    return products.drop_duplicates(
         subset=["codigo", "produto", "preco", "fornecedor"],
         keep="last"
-    )
-
-    return products.reset_index(drop=True)
+    ).reset_index(drop=True)
 
 
 def _supplier_options(products):
-    fornecedores = []
-
     if len(products) and "fornecedor" in products.columns:
         fornecedores = sorted(
             products["fornecedor"]
@@ -64,8 +59,9 @@ def _supplier_options(products):
             .unique()
             .tolist()
         )
+        return ["Todos"] + fornecedores
 
-    return ["Todos"] + fornecedores
+    return ["Todos"]
 
 
 def _filter_by_supplier(products, supplier):
@@ -130,29 +126,8 @@ def _add_item_to_cart(product, quantity, discount):
 def _mobile_css_orders():
     st.markdown("""
     <style>
-    .pedido-box {
-        background: #ffffff !important;
-        border-radius: 22px !important;
-        padding: 16px !important;
-        margin: 10px 10px 16px 10px !important;
-        box-shadow: 0 6px 18px rgba(15,23,42,.10) !important;
-        border: 1px solid #e5e7eb !important;
-    }
-
-    .pedido-titulo {
-        font-size: 22px !important;
-        font-weight: 1000 !important;
-        color: #111827 !important;
-        margin-bottom: 14px !important;
-    }
-
-    .produto-card,
-    .produto-card * {
-        background: #ffffff !important;
-        color: #111827 !important;
-    }
-
     .produto-card {
+        background: #ffffff !important;
         border: 2px solid #f97316 !important;
         border-radius: 18px !important;
         padding: 14px !important;
@@ -160,10 +135,14 @@ def _mobile_css_orders():
         box-shadow: 0 6px 16px rgba(15,23,42,.12) !important;
     }
 
+    .produto-card * {
+        color: #111827 !important;
+        background: transparent !important;
+    }
+
     .produto-nome {
         font-size: 16px !important;
         font-weight: 1000 !important;
-        color: #111827 !important;
         margin-bottom: 6px !important;
     }
 
@@ -172,22 +151,6 @@ def _mobile_css_orders():
         color: #475569 !important;
         font-weight: 800 !important;
         line-height: 1.5 !important;
-    }
-
-    img {
-        max-width: 100% !important;
-        height: auto !important;
-        max-height: 260px !important;
-        object-fit: contain !important;
-        border-radius: 18px !important;
-        display: block !important;
-        margin: 10px auto !important;
-    }
-
-    div[data-baseweb="select"] span {
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
 
     .total-box {
@@ -206,7 +169,6 @@ def _mobile_css_orders():
     .total-label {
         font-size: 12px !important;
         font-weight: 900 !important;
-        opacity: .9 !important;
     }
 
     .total-valor {
@@ -220,7 +182,7 @@ def _mobile_css_orders():
         border: 1px solid #e5e7eb !important;
         border-radius: 18px !important;
         padding: 14px !important;
-        margin: 12px 10px !important;
+        margin: 12px 0 !important;
         box-shadow: 0 4px 14px rgba(15,23,42,.08) !important;
     }
 
@@ -231,35 +193,11 @@ def _mobile_css_orders():
         margin-bottom: 6px !important;
     }
 
-    .cart-grid {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-        margin-top: 10px !important;
-    }
-
-    .cart-mini {
-        background: #f8fafc !important;
-        border-radius: 12px !important;
-        padding: 9px !important;
-        border: 1px solid #e5e7eb !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        color: #475569 !important;
-    }
-
-    .cart-mini b {
-        display: block !important;
-        font-size: 14px !important;
-        color: #111827 !important;
-        margin-top: 3px !important;
-    }
-
     .resumo-pedido {
         background: #111827 !important;
         border-radius: 20px !important;
         padding: 16px !important;
-        margin: 10px !important;
+        margin: 12px 0 !important;
     }
 
     .resumo-pedido span {
@@ -283,6 +221,16 @@ def _mobile_css_orders():
     div.stButton > button {
         white-space: normal !important;
     }
+
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: 260px !important;
+        object-fit: contain !important;
+        border-radius: 18px !important;
+        display: block !important;
+        margin: 10px auto !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -290,8 +238,7 @@ def _mobile_css_orders():
 def show_new_order() -> None:
     _mobile_css_orders()
 
-    products = read_table(PRODUCTS_FILE)
-    products = _prepare_products(products)
+    products = _prepare_products(read_table(PRODUCTS_FILE))
     clients = read_table(CLIENTS_FILE)
 
     if "carrinho" not in st.session_state:
@@ -303,32 +250,88 @@ def show_new_order() -> None:
         st.warning("Nenhum produto cadastrado.")
         return
 
-    st.markdown('<div class="pedido-box">', unsafe_allow_html=True)
-    st.markdown('<div class="pedido-titulo">🛒 Novo Pedido</div>', unsafe_allow_html=True)
+    st.markdown("## 🛒 Novo Pedido")
 
     client_list = (
-        clients["cliente"].astype(str).tolist()
+        clients["cliente"].dropna().astype(str).tolist()
         if "cliente" in clients.columns and len(clients)
         else ["CLIENTE PADRÃO"]
     )
 
-    client = st.selectbox("Cliente", client_list, key="novo_pedido_cliente_mobile")
+    busca_cliente = st.text_input("🔍 Buscar cliente", key="busca_cliente_pedido")
 
-    supplier = st.selectbox(
+    clientes_filtrados = [
+        c for c in client_list
+        if busca_cliente.lower() in c.lower()
+    ][:8] if busca_cliente else client_list[:8]
+
+    if not clientes_filtrados:
+        st.warning("Nenhum cliente encontrado.")
+        client = ""
+    else:
+        client = st.radio(
+            "Selecione o cliente",
+            clientes_filtrados,
+            key="cliente_radio_pedido",
+        )
+
+    busca_fornecedor = st.text_input(
         "Fornecedor",
-        _supplier_options(products),
-        key="novo_pedido_fornecedor_mobile"
+        placeholder="Digite parte do fornecedor ou deixe em branco",
+        key="busca_fornecedor_pedido"
     )
 
-    filtered_products = _filter_by_supplier(products, supplier)
+    produtos_filtrados = products.copy()
 
-    selected_text = st.selectbox(
-        "Produto",
-        _product_options(filtered_products),
-        key=f"novo_pedido_produto_mobile_{supplier}",
+    if busca_fornecedor.strip():
+        produtos_filtrados = produtos_filtrados[
+            produtos_filtrados["fornecedor"]
+            .astype(str)
+            .str.contains(busca_fornecedor, case=False, na=False)
+        ]
+
+    busca_produto = st.text_input(
+        "🔍 Buscar produto",
+        placeholder="Digite código ou nome do produto",
+        key="busca_produto_pedido"
     )
 
-    product = _get_product_from_option(filtered_products, selected_text)
+    if busca_produto.strip():
+        produtos_filtrados = produtos_filtrados[
+            produtos_filtrados.astype(str).apply(
+                lambda row: row.str.contains(
+                    busca_produto,
+                    case=False,
+                    na=False
+                ).any(),
+                axis=1
+            )
+        ]
+
+    produtos_lista = produtos_filtrados.head(10).reset_index(drop=True)
+
+    product = None
+
+    if busca_produto.strip() and len(produtos_lista):
+        opcoes_produtos = []
+
+        for i, row in produtos_lista.iterrows():
+            opcoes_produtos.append(
+                f"{i} | {row.get('codigo', '')} - {row.get('produto', '')} | "
+                f"{money(_safe_float(row.get('preco', 0)))}"
+            )
+
+        produto_escolhido = st.radio(
+            "Selecione o produto",
+            opcoes_produtos,
+            key="produto_radio_pedido"
+        )
+
+        idx = int(produto_escolhido.split("|")[0].strip())
+        product = produtos_lista.iloc[idx].to_dict()
+
+    elif busca_produto.strip():
+        st.warning("Nenhum produto encontrado.")
 
     if product:
         codigo = str(product.get("codigo", ""))
@@ -336,16 +339,19 @@ def show_new_order() -> None:
         fornecedor = str(product.get("fornecedor", ""))
         price = _safe_float(product.get("preco", 0))
 
-        st.markdown(f"""
-        <div class="produto-card">
-            <div class="produto-nome">{produto}</div>
-            <div class="produto-info">
-                Código: {codigo}<br>
-                Fornecedor: {fornecedor}<br>
-                Preço: <b>{money(price)}</b>
+        st.markdown(
+            f"""
+            <div class="produto-card">
+                <div class="produto-nome">{produto}</div>
+                <div class="produto-info">
+                    Código: {codigo}<br>
+                    Fornecedor: {fornecedor}<br>
+                    Preço: <b>{money(price)}</b>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """,
+            unsafe_allow_html=True
+        )
 
     quantity = st.number_input(
         "Quantidade",
@@ -367,15 +373,20 @@ def show_new_order() -> None:
     subtotal_item = price * quantity
     total_item = subtotal_item - (subtotal_item * discount / 100)
 
-    st.markdown(f"""
-    <div class="total-box">
-        <div class="total-label">TOTAL DO ITEM</div>
-        <div class="total-valor">{money(total_item)}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="total-box">
+            <div class="total-label">TOTAL DO ITEM</div>
+            <div class="total-valor">{money(total_item)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     if st.button("➕ ADICIONAR PRODUTO AO PEDIDO", use_container_width=True):
-        if not product:
+        if not client:
+            st.warning("Selecione um cliente.")
+        elif not product:
             st.warning("Selecione um produto antes de adicionar.")
         elif quantity <= 0:
             st.warning("Informe a quantidade antes de adicionar.")
@@ -385,11 +396,7 @@ def show_new_order() -> None:
             time.sleep(0.3)
             st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="pedido-box">', unsafe_allow_html=True)
-    st.markdown('<div class="pedido-titulo">📦 Carrinho</div>', unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("## 📦 Carrinho")
 
     if len(st.session_state.carrinho) == 0:
         st.info("Nenhum produto adicionado ao pedido.")
@@ -408,18 +415,27 @@ def show_new_order() -> None:
                 f"""
                 <div class="cart-card">
                     <div class="cart-title">{item["produto"]}</div>
-                    <div class="produto-info">Código: {item["codigo"]} | Unidade: {item["un"]}</div>
-
-                    <div class="cart-grid">
-                        <div class="cart-mini">Qtd<b>{item["quantidade"]}</b></div>
-                        <div class="cart-mini">Preço<b>{money(item["preco"])}</b></div>
-                        <div class="cart-mini">Desconto<b>{item["desconto"]:.2f}%</b></div>
-                        <div class="cart-mini">Total<b>{money(item["total"])}</b></div>
+                    <div class="produto-info">
+                        Código: {item["codigo"]} | Unidade: {item["un"]}
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
+
+            c1, c2 = st.columns(2)
+
+            with c1:
+                st.write("Qtd")
+                st.markdown(f"**{item['quantidade']}**")
+                st.write("Desconto")
+                st.markdown(f"**{item['desconto']:.2f}%**")
+
+            with c2:
+                st.write("Preço")
+                st.markdown(f"**{money(item['preco'])}**")
+                st.write("Total")
+                st.markdown(f"**{money(item['total'])}**")
 
             if st.button(
                 f"🗑️ Remover item {i + 1}",
@@ -429,17 +445,22 @@ def show_new_order() -> None:
                 st.session_state.carrinho.pop(i)
                 st.rerun()
 
-    st.markdown(f"""
-    <div class="resumo-pedido">
-        <div class="resumo-linha"><span>Subtotal</span><span>{money(subtotal_general)}</span></div>
-        <div class="resumo-linha"><span>Desconto</span><span>{money(discount_general)}</span></div>
-        <div class="resumo-linha resumo-total"><span>Total</span><span>{money(total_general)}</span></div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="resumo-pedido">
+            <div class="resumo-linha"><span>Subtotal</span><span>{money(subtotal_general)}</span></div>
+            <div class="resumo-linha"><span>Desconto</span><span>{money(discount_general)}</span></div>
+            <div class="resumo-linha resumo-total"><span>Total</span><span>{money(total_general)}</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
         if len(st.session_state.carrinho) == 0:
             st.warning("Adicione pelo menos um produto.")
+        elif not client:
+            st.warning("Selecione um cliente.")
         else:
             orders = read_table(ORDERS_FILE)
             number = next_order_number()
@@ -483,8 +504,7 @@ def edit_order() -> None:
     st.markdown("## ✏️ Alterar Pedido")
 
     orders = read_table(ORDERS_FILE)
-    products = read_table(PRODUCTS_FILE)
-    products = _prepare_products(products)
+    products = _prepare_products(read_table(PRODUCTS_FILE))
 
     if len(orders) == 0:
         st.info("Nenhum pedido disponível para alteração.")
