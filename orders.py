@@ -15,11 +15,13 @@ from database import (
 )
 from ui import is_admin, metric_card, title
 
+
 def _safe_float(value):
     try:
         return float(value)
     except Exception:
         return 0.0
+
 
 def _prepare_products(products):
     if "codigo" not in products.columns:
@@ -47,6 +49,7 @@ def _prepare_products(products):
 
     return products.reset_index(drop=True)
 
+
 def _supplier_options(products):
     fornecedores = []
 
@@ -64,6 +67,7 @@ def _supplier_options(products):
 
     return ["Todos"] + fornecedores
 
+
 def _filter_by_supplier(products, supplier):
     if supplier and supplier != "Todos":
         return products[
@@ -71,6 +75,7 @@ def _filter_by_supplier(products, supplier):
         ].reset_index(drop=True)
 
     return products.reset_index(drop=True)
+
 
 def _product_options(products):
     options = ["Selecione ou digite o produto"]
@@ -82,6 +87,7 @@ def _product_options(products):
         )
 
     return options
+
 
 def _get_product_from_option(products, selected_text):
     options = _product_options(products)
@@ -98,6 +104,7 @@ def _get_product_from_option(products, selected_text):
         return None
 
     return products.iloc[idx].to_dict()
+
 
 def _add_item_to_cart(product, quantity, discount):
     codigo = str(product.get("codigo", ""))
@@ -118,6 +125,7 @@ def _add_item_to_cart(product, quantity, discount):
         "subtotal": subtotal,
         "total": total,
     })
+
 
 def _mobile_css_orders():
     st.markdown("""
@@ -262,6 +270,7 @@ def _mobile_css_orders():
     </style>
     """, unsafe_allow_html=True)
 
+
 def show_new_order() -> None:
     _mobile_css_orders()
 
@@ -366,6 +375,7 @@ def show_new_order() -> None:
         subtotal_general = 0
         total_general = 0
         discount_general = 0
+
     else:
         cart = pd.DataFrame(st.session_state.carrinho)
 
@@ -373,40 +383,28 @@ def show_new_order() -> None:
         total_general = cart["total"].sum()
         discount_general = subtotal_general - total_general
 
-        html = f"""
+        for i, item in enumerate(st.session_state.carrinho):
+            produto_nome = str(item.get("produto", ""))
+            codigo = str(item.get("codigo", ""))
+            unidade = str(item.get("un", "UN"))
+            quantidade = item.get("quantidade", 0)
+            preco = _safe_float(item.get("preco", 0))
+            desconto = _safe_float(item.get("desconto", 0))
+            total = _safe_float(item.get("total", 0))
+
+            html = f"""
 <div class="cart-card">
-    <div class="cart-title">{item["produto"]}</div>
-
-    <div class="produto-info">
-        Código: {item["codigo"]} | Unidade: {item["un"]}
-    </div>
-
+    <div class="cart-title">{produto_nome}</div>
+    <div class="produto-info">Código: {codigo} | Unidade: {unidade}</div>
     <div class="cart-grid">
-        <div class="cart-mini">
-            Qtd
-            <b>{item["quantidade"]}</b>
-        </div>
-
-        <div class="cart-mini">
-            Preço
-            <b>{money(item["preco"])}</b>
-        </div>
-
-        <div class="cart-mini">
-            Desconto
-            <b>{item["desconto"]:.2f}%</b>
-        </div>
-
-        <div class="cart-mini">
-            Total
-            <b>{money(item["total"])}</b>
-        </div>
+        <div class="cart-mini">Qtd<b>{quantidade}</b></div>
+        <div class="cart-mini">Preço<b>{money(preco)}</b></div>
+        <div class="cart-mini">Desconto<b>{desconto:.2f}%</b></div>
+        <div class="cart-mini">Total<b>{money(total)}</b></div>
     </div>
 </div>
 """
-
-st.markdown(html, unsafe_allow_html=True)
-            )
+            st.markdown(html, unsafe_allow_html=True)
 
             if st.button(
                 f"🗑️ Remover item {i + 1}",
@@ -463,6 +461,7 @@ st.markdown(html, unsafe_allow_html=True)
     if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
         st.session_state.carrinho = []
         st.rerun()
+
 
 def edit_order() -> None:
     st.markdown("---")
@@ -633,6 +632,7 @@ def edit_order() -> None:
         st.success(f"Pedido nº {selected_order} atualizado com sucesso!")
         time.sleep(0.8)
         st.rerun()
+
 
 def show_orders() -> None:
     title("📋 Pedidos Lançados")
