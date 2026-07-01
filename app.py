@@ -433,6 +433,12 @@ def iniciar_sessao():
     if "form_key" not in st.session_state:
         st.session_state.form_key = 0
 
+    if "cliente_selecionado" not in st.session_state:
+        st.session_state.cliente_selecionado = None
+
+    if "produto_selecionado" not in st.session_state:
+        st.session_state.produto_selecionado = None
+
 
 def ir_para(page):
     st.session_state.page = page
@@ -619,84 +625,193 @@ def dashboard():
             """, unsafe_allow_html=True)
 
 
+def selecionar_cliente(codigo, nome, cidade):
+    st.session_state.cliente_selecionado = {
+        "codigo": codigo,
+        "cliente": nome,
+        "cidade": cidade,
+    }
+    st.rerun()
+
+
+def trocar_cliente():
+    st.session_state.cliente_selecionado = None
+    st.rerun()
+
+
+def selecionar_produto(produto_dict):
+    st.session_state.produto_selecionado = produto_dict
+    st.rerun()
+
+
+def trocar_produto():
+    st.session_state.produto_selecionado = None
+    st.rerun()
+
+
 def novo_pedido():
     topo("Novo Pedido", "Lançamento de pedido", "🛒")
 
     clientes = ler_excel(ARQ_CLIENTES)
     produtos = ler_excel(ARQ_PRODUTOS)
 
+    if "cliente_selecionado" not in st.session_state:
+        st.session_state.cliente_selecionado = None
+
+    if "produto_selecionado" not in st.session_state:
+        st.session_state.produto_selecionado = None
+
     abrir_card()
 
+    # =========================
+    # CLIENTE ÚNICO
+    # =========================
     secao("CLIENTE", "👤")
 
-    busca_cliente = st.text_input(
-        "Buscar cliente",
-        placeholder="Buscar cliente por nome, código ou CNPJ",
-        label_visibility="collapsed",
-        key=f"busca_cliente_{st.session_state.form_key}",
-    )
+    cliente_escolhido = st.session_state.cliente_selecionado
 
-    clientes_filtrados = clientes.copy()
-    if len(clientes_filtrados) and busca_cliente.strip():
-        termo = busca_cliente.strip().lower()
-        clientes_filtrados = clientes[
-            clientes["cliente"].astype(str).str.lower().str.contains(termo, na=False) |
-            clientes["codigo"].astype(str).str.lower().str.contains(termo, na=False) |
-            clientes["cnpj"].astype(str).str.lower().str.contains(termo, na=False)
-        ]
+    if cliente_escolhido:
+        st.markdown(f"""
+        <div class="pedido-card">
+            <b>✅ Cliente selecionado</b><br>
+            👤 {cliente_escolhido["cliente"]}<br>
+            Código: {cliente_escolhido["codigo"]}<br>
+            Cidade: {cliente_escolhido.get("cidade", "")}
+        </div>
+        """, unsafe_allow_html=True)
 
-    lista_clientes = clientes_filtrados["cliente"].astype(str).tolist() if len(clientes_filtrados) else ["CLIENTE NÃO ENCONTRADO"]
-    cliente = st.selectbox(
-        "Selecionar cliente",
-        lista_clientes,
-        label_visibility="collapsed",
-        key=f"cliente_{st.session_state.form_key}",
-    )
+        if st.button("🔄 TROCAR CLIENTE", use_container_width=True):
+            trocar_cliente()
 
+        cliente = cliente_escolhido["cliente"]
+
+    else:
+        busca_cliente = st.text_input(
+            "Cliente",
+            placeholder="Digite nome, código, CNPJ ou iniciais",
+            label_visibility="collapsed",
+            key=f"busca_cliente_unica_{st.session_state.form_key}",
+        )
+
+        cliente = None
+
+        clientes_filtrados = clientes.copy()
+
+        if len(clientes_filtrados) and busca_cliente.strip():
+            termo = busca_cliente.strip().lower()
+
+            clientes_filtrados = clientes[
+                clientes["cliente"].astype(str).str.lower().str.contains(termo, na=False) |
+                clientes["codigo"].astype(str).str.lower().str.contains(termo, na=False) |
+                clientes["cnpj"].astype(str).str.lower().str.contains(termo, na=False) |
+                clientes["cidade"].astype(str).str.lower().str.contains(termo, na=False)
+            ]
+
+            clientes_filtrados = clientes_filtrados.head(8)
+
+            if len(clientes_filtrados) == 0:
+                st.warning("Nenhum cliente encontrado.")
+            else:
+                st.caption("Toque no cliente para selecionar:")
+
+                for i, row in clientes_filtrados.iterrows():
+                    nome_cliente = str(row.get("cliente", ""))
+                    codigo_cliente = str(row.get("codigo", ""))
+                    cidade_cliente = str(row.get("cidade", ""))
+
+                    st.markdown(f"""
+                    <div class="pedido-card">
+                        <b>👤 {nome_cliente}</b><br>
+                        Código: {codigo_cliente}<br>
+                        Cidade: {cidade_cliente}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if st.button(
+                        f"✅ Selecionar cliente {codigo_cliente}",
+                        key=f"sel_cliente_{codigo_cliente}_{i}",
+                        use_container_width=True,
+                    ):
+                        selecionar_cliente(codigo_cliente, nome_cliente, cidade_cliente)
+
+        else:
+            st.info("Digite para localizar o cliente. Exemplo: NEL, DRO, NATURA, código ou CNPJ.")
+
+    # =========================
+    # PRODUTO ÚNICO
+    # =========================
     secao("PRODUTO", "📦")
 
-    busca_produto = st.text_input(
-        "Buscar produto",
-        placeholder="Buscar produto por código ou nome",
-        label_visibility="collapsed",
-        key=f"busca_produto_{st.session_state.form_key}",
-    )
-
-    produtos_filtrados = produtos.copy()
-    if len(produtos_filtrados) and busca_produto.strip():
-        termo = busca_produto.strip().lower()
-        produtos_filtrados = produtos[
-            produtos["produto"].astype(str).str.lower().str.contains(termo, na=False) |
-            produtos["codigo"].astype(str).str.lower().str.contains(termo, na=False)
-        ]
-
-    opcoes = ["Selecione o produto"]
-
-    for _, row in produtos_filtrados.iterrows():
-        opcoes.append(f'{row["codigo"]} - {row["produto"]} | {dinheiro(row["preco"])}')
-
-    produto_txt = st.selectbox(
-        "Produto",
-        opcoes,
-        label_visibility="collapsed",
-        key=f"produto_{st.session_state.form_key}",
-    )
-
-    produto = None
-    if produto_txt != "Selecione o produto":
-        idx = opcoes.index(produto_txt) - 1
-        produto = produtos_filtrados.iloc[idx].to_dict()
+    produto = st.session_state.produto_selecionado
 
     if produto:
         st.markdown(f"""
         <div class="pedido-card">
-            <b>{produto["produto"]}</b><br>
+            <b>✅ Produto selecionado</b><br>
+            📦 {produto["produto"]}<br>
             Código: {produto["codigo"]}<br>
             Fornecedor: {produto.get("fornecedor", "")}<br>
             Preço: <span class="valor">{dinheiro(produto["preco"])}</span>
         </div>
         """, unsafe_allow_html=True)
 
+        if st.button("🔄 TROCAR PRODUTO", use_container_width=True):
+            trocar_produto()
+
+    else:
+        busca_produto = st.text_input(
+            "Produto",
+            placeholder="Digite código, produto ou iniciais",
+            label_visibility="collapsed",
+            key=f"busca_produto_unica_{st.session_state.form_key}",
+        )
+
+        produtos_filtrados = produtos.copy()
+
+        if len(produtos_filtrados) and busca_produto.strip():
+            termo = busca_produto.strip().lower()
+
+            produtos_filtrados = produtos[
+                produtos["produto"].astype(str).str.lower().str.contains(termo, na=False) |
+                produtos["codigo"].astype(str).str.lower().str.contains(termo, na=False) |
+                produtos["fornecedor"].astype(str).str.lower().str.contains(termo, na=False)
+            ]
+
+            produtos_filtrados = produtos_filtrados.head(10)
+
+            if len(produtos_filtrados) == 0:
+                st.warning("Nenhum produto encontrado.")
+            else:
+                st.caption("Toque no produto para selecionar:")
+
+                for i, row in produtos_filtrados.iterrows():
+                    produto_dict = row.to_dict()
+                    codigo_produto = str(row.get("codigo", ""))
+                    nome_produto = str(row.get("produto", ""))
+                    fornecedor = str(row.get("fornecedor", ""))
+
+                    st.markdown(f"""
+                    <div class="pedido-card">
+                        <b>📦 {nome_produto}</b><br>
+                        Código: {codigo_produto}<br>
+                        Fornecedor: {fornecedor}<br>
+                        Preço: <span class="valor">{dinheiro(row.get("preco", 0))}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    if st.button(
+                        f"✅ Selecionar produto {codigo_produto}",
+                        key=f"sel_produto_{codigo_produto}_{i}",
+                        use_container_width=True,
+                    ):
+                        selecionar_produto(produto_dict)
+
+        else:
+            st.info("Digite para localizar o produto. Exemplo: MEL, 178, PRÓPOLIS ou BENETONICO.")
+
+    # =========================
+    # QUANTIDADE / DESCONTO
+    # =========================
     c1, c2 = st.columns(2)
 
     with c1:
@@ -733,12 +848,12 @@ def novo_pedido():
     """, unsafe_allow_html=True)
 
     if st.button("➕ ADICIONAR AO CARRINHO", use_container_width=True):
-        if not produto:
+        if not cliente:
+            st.warning("Selecione um cliente.")
+        elif not produto:
             st.warning("Selecione um produto.")
         elif qtd <= 0:
             st.warning("Informe a quantidade.")
-        elif cliente == "CLIENTE NÃO ENCONTRADO":
-            st.warning("Selecione um cliente válido.")
         else:
             st.session_state.carrinho.append({
                 "codigo": produto["codigo"],
@@ -750,15 +865,17 @@ def novo_pedido():
                 "subtotal": subtotal,
                 "total": total_item,
             })
+
+            st.session_state.produto_selecionado = None
             st.session_state.form_key += 1
-            st.success("Produto adicionado.")
+
+            st.success("Produto adicionado ao carrinho.")
             time.sleep(0.4)
             st.rerun()
 
     fechar_card()
 
     carrinho(cliente)
-
 
 def carrinho(cliente):
     abrir_card()
@@ -835,6 +952,8 @@ def carrinho(cliente):
             salvar_excel(pedidos, ARQ_PEDIDOS)
 
             st.session_state.carrinho = []
+            st.session_state.cliente_selecionado = None
+            st.session_state.produto_selecionado = None
             st.session_state.form_key += 1
             st.success(f"Pedido nº {numero} salvo com sucesso!")
             time.sleep(1)
