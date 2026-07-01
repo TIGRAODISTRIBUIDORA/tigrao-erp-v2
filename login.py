@@ -1,6 +1,11 @@
+import re
 import streamlit as st
 
 from database import USERS_FILE, read_table
+
+
+def limpar_cpf(valor):
+    return re.sub(r"\D", "", str(valor))
 
 
 def login_screen() -> None:
@@ -55,14 +60,17 @@ def login_screen() -> None:
         border-radius: 22px;
         font-size: 22px;
         font-weight: 1000;
-        margin-bottom: 18px;
+        margin-bottom: 22px;
         box-shadow: 0 8px 24px rgba(0,0,0,.25);
         border: 2px solid #fed7aa;
     }
 
     label {
-        color: white !important;
-        font-weight: 900 !important;
+        color: #ffffff !important;
+        font-weight: 1000 !important;
+        font-size: 15px !important;
+        opacity: 1 !important;
+        margin-bottom: 6px !important;
     }
 
     input {
@@ -70,8 +78,14 @@ def login_screen() -> None:
         color: #111827 !important;
         border: 2px solid #fed7aa !important;
         border-radius: 16px !important;
-        min-height: 52px !important;
-        font-size: 16px !important;
+        min-height: 54px !important;
+        font-size: 17px !important;
+        font-weight: 800 !important;
+    }
+
+    input::placeholder {
+        color: #6b7280 !important;
+        opacity: 1 !important;
     }
 
     div.stButton > button {
@@ -85,6 +99,7 @@ def login_screen() -> None:
         border: none !important;
         box-shadow: 0 7px 18px rgba(249,115,22,.35);
         transition: all .12s ease-in-out !important;
+        margin-top: 10px;
     }
 
     div.stButton > button:hover {
@@ -109,15 +124,19 @@ def login_screen() -> None:
     <div class="login-card-title">Acesso ao sistema</div>
     """, unsafe_allow_html=True)
 
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
+    cpf = st.text_input("CPF", placeholder="Digite seu CPF")
+    senha = st.text_input("Senha", type="password", placeholder="Digite sua senha")
 
     if st.button("ENTRAR", use_container_width=True):
         users = read_table(USERS_FILE)
+
         users["usuario"] = users["usuario"].astype(str)
+        cpf_digitado = limpar_cpf(cpf)
+
+        users["_cpf_limpo"] = users["usuario"].apply(limpar_cpf)
 
         match = users[
-            (users["usuario"] == usuario) &
+            (users["_cpf_limpo"] == cpf_digitado) &
             (users["senha"].astype(str) == senha)
         ]
 
@@ -132,7 +151,7 @@ def login_screen() -> None:
                 st.session_state.perfil = str(row["perfil"])
                 st.rerun()
         else:
-            st.error("Usuário ou senha incorretos.")
+            st.error("CPF ou senha incorretos.")
 
     st.stop()
 
