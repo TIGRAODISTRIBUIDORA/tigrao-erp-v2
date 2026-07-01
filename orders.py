@@ -1,651 +1,216 @@
-import time
-import pandas as pd
 import streamlit as st
+from html import escape
 
-from database import (
-    CLIENTS_FILE,
-    ORDERS_FILE,
-    PRODUCTS_FILE,
-    money,
-    next_order_number,
-    now_text,
-    read_table,
-    save_table,
-    to_excel_bytes,
-)
-from ui import is_admin, metric_card, title
+from database import COMMISSION_RATE, ORDERS_FILE, money, read_table
 
 
-def _safe_float(value):
-    try:
-        return float(value)
-    except Exception:
-        return 0.0
-
-
-def _prepare_products(products):
-    if "codigo" not in products.columns:
-        products["codigo"] = ""
-    if "produto" not in products.columns:
-        products["produto"] = ""
-    if "un" not in products.columns:
-        products["un"] = "UN"
-    if "preco" not in products.columns:
-        products["preco"] = 0
-    if "fornecedor" not in products.columns:
-        products["fornecedor"] = ""
-
-    products["codigo"] = products["codigo"].astype(str).str.strip()
-    products["produto"] = products["produto"].astype(str).str.strip()
-    products["un"] = products["un"].astype(str).str.strip()
-    products["fornecedor"] = products["fornecedor"].astype(str).str.strip()
-    products["preco"] = pd.to_numeric(products["preco"], errors="coerce").fillna(0)
-
-    products = products[products["produto"] != ""]
-    products = products.drop_duplicates(
-        subset=["codigo", "produto", "preco", "fornecedor"],
-        keep="last"
+def card_dashboard(icone, titulo, valor, descricao):
+    st.markdown(
+        f"""
+        <div class="dash-card">
+            <div class="dash-icon">{icone}</div>
+            <div class="dash-label">{titulo}</div>
+            <div class="dash-value">{valor}</div>
+            <div class="dash-desc">{descricao}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
-    return products.reset_index(drop=True)
 
+def show_dashboard() -> None:
+    orders = read_table(ORDERS_FILE)
 
-def _supplier_options(products):
-    fornecedores = []
+    total_sales = orders["total"].sum() if len(orders) and "total" in orders.columns else 0
+    total_orders = orders["pedido"].nunique() if len(orders) and "pedido" in orders.columns else 0
+    commission = total_sales * COMMISSION_RATE
 
-    if len(products) and "fornecedor" in products.columns:
-        fornecedores = sorted(
-            products["fornecedor"]
-            .fillna("")
-            .astype(str)
-            .str.strip()
-            .replace("", pd.NA)
-            .dropna()
-            .unique()
-            .tolist()
-        )
-
-    return ["Todos"] + fornecedores
-
-
-def _filter_by_supplier(products, supplier):
-    if supplier and supplier != "Todos":
-        return products[
-            products["fornecedor"].astype(str).str.strip() == supplier
-        ].reset_index(drop=True)
-
-    return products.reset_index(drop=True)
-
-
-def _product_options(products):
-    options = ["Selecione ou digite o produto"]
-
-    for _, row in products.iterrows():
-        options.append(
-            f"{row.get('codigo', '')} - {row.get('produto', '')} | "
-            f"{money(_safe_float(row.get('preco', 0)))} | {row.get('fornecedor', '')}"
-        )
-
-    return options
-
-
-def _get_product_from_option(products, selected_text):
-    options = _product_options(products)
-
-    if selected_text == "Selecione ou digite o produto":
-        return None
-
-    if selected_text not in options:
-        return None
-
-    idx = options.index(selected_text) - 1
-
-    if idx < 0:
-        return None
-
-    return products.iloc[idx].to_dict()
-
-
-def _add_item_to_cart(product, quantity, discount):
-    codigo = str(product.get("codigo", ""))
-    produto = str(product.get("produto", ""))
-    unidade = str(product.get("un", "UN"))
-    price = _safe_float(product.get("preco", 0))
-
-    subtotal = price * quantity
-    total = subtotal - (subtotal * discount / 100)
-
-    st.session_state.carrinho.append({
-        "codigo": codigo,
-        "produto": produto,
-        "un": unidade,
-        "quantidade": quantity,
-        "preco": price,
-        "desconto": discount,
-        "subtotal": subtotal,
-        "total": total,
-    })
-
-
-def _mobile_css_orders():
     st.markdown("""
     <style>
-    .produto-card,
-    .produto-card * {
-        background: #ffffff !important;
-        color: #111827 !important;
+    .dash-hero {
+        background: linear-gradient(135deg, #111827 0%, #000000 45%, #f97316 100%);
+        border-radius: 0 0 28px 28px;
+        padding: 26px 22px 90px;
+        margin: -10px -10px 0 -10px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,.22);
     }
 
-    .produto-card {
-        border: 2px solid #f97316 !important;
-        border-radius: 18px !important;
-        padding: 14px !important;
-        margin: 12px 0 !important;
-        box-shadow: 0 6px 16px rgba(15,23,42,.12) !important;
+    .dash-hero::after {
+        content: "🐯";
+        position: absolute;
+        right: -20px;
+        bottom: -40px;
+        font-size: 150px;
+        opacity: .18;
     }
 
-    .produto-nome {
-        font-size: 16px !important;
-        font-weight: 1000 !important;
-        color: #111827 !important;
-        margin-bottom: 6px !important;
-    }
-
-    .produto-info {
-        font-size: 13px !important;
-        color: #475569 !important;
-        font-weight: 800 !important;
-        line-height: 1.5 !important;
-    }
-
-    img {
-        max-width: 100% !important;
-        height: auto !important;
-        max-height: 260px !important;
-        object-fit: contain !important;
-        border-radius: 18px !important;
-        display: block !important;
-        margin: 10px auto !important;
-    }
-
-    div[data-baseweb="select"] span {
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-
-    .total-box {
-        background: #0b8de3 !important;
-        border-radius: 18px !important;
-        padding: 16px !important;
-        text-align: center !important;
-        margin: 14px 0 !important;
-        box-shadow: 0 6px 16px rgba(11,141,227,.25) !important;
-    }
-
-    .total-box div {
+    .dash-logo, .dash-title, .dash-subtitle {
         color: white !important;
     }
 
-    .total-label {
-        font-size: 12px !important;
-        font-weight: 900 !important;
-        opacity: .9 !important;
+    .dash-logo {
+        font-size: 15px;
+        font-weight: 900;
+        margin-bottom: 28px;
     }
 
-    .total-valor {
-        font-size: 28px !important;
-        font-weight: 1000 !important;
-        margin-top: 4px !important;
+    .dash-title {
+        font-size: 34px;
+        font-weight: 1000;
     }
 
-    .cart-card {
-        background: #ffffff !important;
-        border: 1px solid #e5e7eb !important;
-        border-radius: 18px !important;
-        padding: 14px !important;
-        margin: 12px 0 !important;
-        box-shadow: 0 4px 14px rgba(15,23,42,.08) !important;
+    .dash-subtitle {
+        color: #ffedd5 !important;
+        font-size: 15px;
+        font-weight: 800;
     }
 
-    .resumo-pedido {
-        background: #111827 !important;
-        border-radius: 20px !important;
-        padding: 16px !important;
-        margin: 10px 0 !important;
+    .dash-cards {
+        margin: -60px 10px 24px 10px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        position: relative;
+        z-index: 2;
     }
 
-    .resumo-pedido span {
-        color: white !important;
+    .dash-card {
+        background: white;
+        border-radius: 24px;
+        padding: 22px;
+        box-shadow: 0 10px 26px rgba(15,23,42,.16);
+        border: 1px solid #fed7aa;
+        text-align: center;
     }
 
-    .resumo-linha {
-        display: flex !important;
-        justify-content: space-between !important;
-        font-weight: 900 !important;
-        margin-bottom: 8px !important;
+    .dash-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        background: #111827;
+        color: #f97316 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 14px;
+        font-size: 32px;
     }
 
-    .resumo-total {
-        border-top: 1px solid rgba(255,255,255,.25) !important;
-        padding-top: 10px !important;
-        margin-top: 10px !important;
-        font-size: 20px !important;
+    .dash-label {
+        color: #6b7280 !important;
+        font-size: 13px;
+        font-weight: 1000;
+        text-transform: uppercase;
     }
 
-    div.stButton > button {
-        white-space: normal !important;
+    .dash-value {
+        color: #111827 !important;
+        font-size: 30px;
+        font-weight: 1000;
+        margin-top: 8px;
+    }
+
+    .dash-desc {
+        color: #f97316 !important;
+        font-size: 14px;
+        font-weight: 900;
+        margin-top: 6px;
+    }
+
+    .orders-title {
+        margin: 14px 12px 12px;
+        font-size: 25px;
+        font-weight: 1000;
+        color: #111827 !important;
+    }
+
+    .orders-box {
+        background: white;
+        margin: 0 10px 20px 10px;
+        border-radius: 22px;
+        padding: 12px;
+        box-shadow: 0 8px 24px rgba(15,23,42,.10);
+        border: 1px solid #e5e7eb;
+    }
+
+    .order-row {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 13px 4px;
+    }
+
+    .order-row:last-child {
+        border-bottom: none;
+    }
+
+    .order-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .order-number, .order-total {
+        color: #f97316 !important;
+        font-weight: 1000;
+    }
+
+    .order-client {
+        color: #111827 !important;
+        font-weight: 900;
+        font-size: 14px;
+        margin-top: 4px;
+    }
+
+    .order-info {
+        color: #6b7280 !important;
+        font-weight: 700;
+        font-size: 12px;
+        margin-top: 3px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-
-def show_new_order() -> None:
-    _mobile_css_orders()
-
-    products = read_table(PRODUCTS_FILE)
-    products = _prepare_products(products)
-    clients = read_table(CLIENTS_FILE)
-
-    if "carrinho" not in st.session_state:
-        st.session_state.carrinho = []
-
-    seller = st.session_state.get("vendedor", "")
-
-    if len(products) == 0:
-        st.warning("Nenhum produto cadastrado.")
-        return
-
-    st.markdown("## 🛒 Novo Pedido")
-
-    client_list = (
-        clients["cliente"].astype(str).tolist()
-        if "cliente" in clients.columns and len(clients)
-        else ["CLIENTE PADRÃO"]
-    )
-
-    client = st.selectbox("Cliente", client_list, key="novo_pedido_cliente_mobile")
-
-    supplier = st.selectbox(
-        "Fornecedor",
-        _supplier_options(products),
-        key="novo_pedido_fornecedor_mobile"
-    )
-
-    filtered_products = _filter_by_supplier(products, supplier)
-
-    selected_text = st.selectbox(
-        "Produto",
-        _product_options(filtered_products),
-        key=f"novo_pedido_produto_mobile_{supplier}",
-    )
-
-    product = _get_product_from_option(filtered_products, selected_text)
-
-    if product:
-        codigo = str(product.get("codigo", ""))
-        produto = str(product.get("produto", ""))
-        fornecedor = str(product.get("fornecedor", ""))
-        price = _safe_float(product.get("preco", 0))
-
-        st.markdown(f"""
-        <div class="produto-card">
-            <div class="produto-nome">{produto}</div>
-            <div class="produto-info">
-                Código: {codigo}<br>
-                Fornecedor: {fornecedor}<br>
-                Preço: <b>{money(price)}</b>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    quantity = st.number_input(
-        "Quantidade",
-        min_value=0,
-        value=0,
-        step=1,
-        key="novo_pedido_quantidade_mobile"
-    )
-
-    discount = st.number_input(
-        "% Desconto",
-        min_value=0.0,
-        value=0.0,
-        step=1.0,
-        key="novo_pedido_desconto_mobile"
-    )
-
-    price = _safe_float(product.get("preco", 0)) if product else 0
-    subtotal_item = price * quantity
-    total_item = subtotal_item - (subtotal_item * discount / 100)
-
-    st.markdown(f"""
-    <div class="total-box">
-        <div class="total-label">TOTAL DO ITEM</div>
-        <div class="total-valor">{money(total_item)}</div>
+    st.markdown("""
+    <div class="dash-hero">
+        <div class="dash-logo">🐯 TIGRÃO DISTRIBUIDORA</div>
+        <div class="dash-title">Dashboard</div>
+        <div class="dash-subtitle">Visão geral da operação</div>
     </div>
     """, unsafe_allow_html=True)
 
-    if st.button("➕ ADICIONAR PRODUTO AO PEDIDO", use_container_width=True):
-        if not product:
-            st.warning("Selecione um produto antes de adicionar.")
-        elif quantity <= 0:
-            st.warning("Informe a quantidade antes de adicionar.")
-        else:
-            _add_item_to_cart(product, quantity, discount)
-            st.success("Produto adicionado ao carrinho.")
-            time.sleep(0.3)
-            st.rerun()
+    st.markdown('<div class="dash-cards">', unsafe_allow_html=True)
+    card_dashboard("📋", "Pedidos", total_orders, "Total de pedidos")
+    card_dashboard("💰", "Vendas", money(total_sales), "Valor total de vendas")
+    card_dashboard("%", "Comissão 7%", money(commission), "Valor da comissão")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("## 📦 Carrinho")
+    st.markdown('<div class="orders-title">🕘 Últimos pedidos</div>', unsafe_allow_html=True)
 
-    if len(st.session_state.carrinho) == 0:
-        st.info("Nenhum produto adicionado ao pedido.")
-        subtotal_general = 0
-        total_general = 0
-        discount_general = 0
-    else:
-        cart = pd.DataFrame(st.session_state.carrinho)
+    if len(orders):
+        ultimos = orders.tail(20).copy()
 
-        subtotal_general = cart["subtotal"].sum()
-        total_general = cart["total"].sum()
-        discount_general = subtotal_general - total_general
+        st.markdown('<div class="orders-box">', unsafe_allow_html=True)
 
-        st.markdown('<div class="cart-card">', unsafe_allow_html=True)
+        for _, row in ultimos.iterrows():
+            pedido = escape(str(row.get("pedido", "")))
+            data = escape(str(row.get("data", "")))
+            vendedor = escape(str(row.get("vendedor", "")))
+            cliente = escape(str(row.get("cliente", "")))
+            total = money(row.get("total", 0))
 
-        for i, item in enumerate(st.session_state.carrinho):
             st.markdown(f"""
-            <div style="border-bottom:1px solid #e5e7eb; padding:12px 0;">
-                <div style="color:#0b8de3; font-weight:1000; font-size:15px;">
-                    {item["produto"]}
+            <div class="order-row">
+                <div class="order-top">
+                    <div class="order-number">Pedido #{pedido}</div>
+                    <div class="order-total">{total}</div>
                 </div>
-
-                <div style="font-size:13px; font-weight:800; color:#475569; margin-top:4px;">
-                    Código: {item["codigo"]} | Unidade: {item["un"]}
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
-                    <div>Qtd<br><b>{item["quantidade"]}</b></div>
-                    <div>Preço<br><b>{money(item["preco"])}</b></div>
-                    <div>Desconto<br><b>{item["desconto"]:.2f}%</b></div>
-                    <div>Total<br><b>{money(item["total"])}</b></div>
-                </div>
+                <div class="order-client">{cliente}</div>
+                <div class="order-info">{data} • {vendedor}</div>
             </div>
             """, unsafe_allow_html=True)
 
-            if st.button(
-                f"🗑️ Remover item {i + 1}",
-                key=f"remover_item_{i}",
-                use_container_width=True
-            ):
-                st.session_state.carrinho.pop(i)
-                st.rerun()
-
         st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="resumo-pedido">
-        <div class="resumo-linha"><span>Subtotal</span><span>{money(subtotal_general)}</span></div>
-        <div class="resumo-linha"><span>Desconto</span><span>{money(discount_general)}</span></div>
-        <div class="resumo-linha resumo-total"><span>Total</span><span>{money(total_general)}</span></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.button("✅ FINALIZAR PEDIDO", use_container_width=True):
-        if len(st.session_state.carrinho) == 0:
-            st.warning("Adicione pelo menos um produto.")
-        else:
-            orders = read_table(ORDERS_FILE)
-            number = next_order_number()
-            date = now_text()
-
-            rows = []
-
-            for item in st.session_state.carrinho:
-                rows.append({
-                    "pedido": number,
-                    "data": date,
-                    "vendedor": seller,
-                    "cliente": client,
-                    "codigo": item["codigo"],
-                    "produto": item["produto"],
-                    "un": item["un"],
-                    "quantidade": item["quantidade"],
-                    "preco": item["preco"],
-                    "desconto": item["desconto"],
-                    "subtotal": item["subtotal"],
-                    "total": item["total"],
-                    "status": "PENDENTE",
-                })
-
-            orders = pd.concat([orders, pd.DataFrame(rows)], ignore_index=True)
-            save_table(orders, ORDERS_FILE)
-
-            st.session_state.carrinho = []
-
-            st.success(f"Pedido nº {number} salvo com sucesso!")
-            time.sleep(0.8)
-            st.rerun()
-
-    if st.button("🗑️ LIMPAR PEDIDO", use_container_width=True):
-        st.session_state.carrinho = []
-        st.rerun()
-
-
-def edit_order() -> None:
-    st.markdown("---")
-    st.markdown("## ✏️ Alterar Pedido")
-
-    orders = read_table(ORDERS_FILE)
-    products = read_table(PRODUCTS_FILE)
-    products = _prepare_products(products)
-
-    if len(orders) == 0:
-        st.info("Nenhum pedido disponível para alteração.")
-        return
-
-    order_list = sorted(orders["pedido"].dropna().unique())
-    selected_order = st.selectbox("Selecione o pedido para alterar", order_list)
-
-    order_items = orders[orders["pedido"] == selected_order].copy()
-
-    if len(order_items) == 0:
-        st.warning("Pedido não encontrado.")
-        return
-
-    status = str(order_items["status"].iloc[0]) if "status" in order_items.columns else "PENDENTE"
-
-    if status.upper() == "FATURADO" and not is_admin():
-        st.error("Pedido faturado não pode ser alterado pelo vendedor.")
-        return
-
-    st.info(
-        f"Pedido nº {selected_order} | Cliente: {order_items['cliente'].iloc[0]} | Status: {status}"
-    )
-
-    st.markdown("### Itens do pedido")
-
-    updated_rows = []
-
-    for idx, row in order_items.iterrows():
-        st.markdown("---")
-        st.markdown(f"**{row['codigo']} - {row['produto']}**")
-        st.caption(f"Preço unitário: {money(_safe_float(row['preco']))}")
-
-        new_qty = st.number_input(
-            "Qtd",
-            min_value=0,
-            value=int(row["quantidade"]),
-            step=1,
-            key=f"edit_qty_{selected_order}_{idx}",
-        )
-
-        new_discount = st.number_input(
-            "% Desc.",
-            min_value=0.0,
-            value=_safe_float(row["desconto"]),
-            step=1.0,
-            key=f"edit_desc_{selected_order}_{idx}",
-        )
-
-        price = _safe_float(row["preco"])
-        subtotal = price * new_qty
-        total = subtotal - (subtotal * new_discount / 100)
-
-        st.write(f"Total: **{money(total)}**")
-
-        remove = st.checkbox("Excluir este item", key=f"remove_{selected_order}_{idx}")
-
-        if not remove and new_qty > 0:
-            new_row = row.to_dict()
-            new_row["quantidade"] = new_qty
-            new_row["desconto"] = new_discount
-            new_row["subtotal"] = subtotal
-            new_row["total"] = total
-            updated_rows.append(new_row)
-
-    st.markdown("---")
-    st.markdown("### ➕ Adicionar novo produto ao pedido")
-
-    edit_supplier_filter = st.selectbox(
-        "Fornecedor",
-        _supplier_options(products),
-        key="edit_order_fornecedor",
-    )
-
-    edit_filtered_products = _filter_by_supplier(products, edit_supplier_filter)
-
-    selected_text = st.selectbox(
-        "Buscar produto para adicionar",
-        _product_options(edit_filtered_products),
-        key=f"edit_order_product_selectbox_{edit_supplier_filter}",
-    )
-
-    product = _get_product_from_option(edit_filtered_products, selected_text)
-
-    if product:
-        price = _safe_float(product.get("preco", 0))
-
-        st.markdown(f"**{product.get('codigo', '')} - {product.get('produto', '')}**")
-        st.caption(f"Preço: {money(price)}")
-
-        add_qty = st.number_input(
-            "Qtd.",
-            min_value=1,
-            value=1,
-            step=1,
-            key="edit_add_qty",
-        )
-
-        add_discount = st.number_input(
-            "% Desc.",
-            min_value=0.0,
-            value=0.0,
-            step=1.0,
-            key="edit_add_discount",
-        )
-
-        subtotal = price * add_qty
-        total = subtotal - (subtotal * add_discount / 100)
-
-        st.write(f"Total: **{money(total)}**")
-
-        if st.button("➕ Adicionar produto ao pedido"):
-            base = order_items.iloc[0].to_dict()
-
-            new_item = {
-                "pedido": selected_order,
-                "data": base.get("data", now_text()),
-                "vendedor": base.get("vendedor", ""),
-                "cliente": base.get("cliente", ""),
-                "codigo": product.get("codigo", ""),
-                "produto": product.get("produto", ""),
-                "un": product.get("un", "UN"),
-                "quantidade": add_qty,
-                "preco": price,
-                "desconto": add_discount,
-                "subtotal": subtotal,
-                "total": total,
-                "status": status,
-            }
-
-            updated_rows.append(new_item)
-            st.success("Produto adicionado na alteração. Clique em Salvar Alterações.")
-            time.sleep(0.5)
-
-    st.markdown("---")
-
-    if len(updated_rows):
-        preview = pd.DataFrame(updated_rows)
-        st.markdown("### Prévia do pedido alterado")
-        st.dataframe(preview, use_container_width=True)
-
-        total_order = preview["total"].sum()
-        metric_card("Novo total do pedido", money(total_order))
     else:
-        st.warning("O pedido ficará sem itens se salvar essa alteração.")
-
-    if st.button("💾 SALVAR ALTERAÇÕES DO PEDIDO"):
-        if len(updated_rows) == 0:
-            st.warning("Não é possível salvar pedido sem itens.")
-            return
-
-        all_orders = read_table(ORDERS_FILE)
-        all_orders = all_orders[all_orders["pedido"] != selected_order]
-
-        updated_df = pd.DataFrame(updated_rows)
-        all_orders = pd.concat([all_orders, updated_df], ignore_index=True)
-
-        save_table(all_orders, ORDERS_FILE)
-
-        st.success(f"Pedido nº {selected_order} atualizado com sucesso!")
-        time.sleep(0.8)
-        st.rerun()
-
-
-def show_orders() -> None:
-    title("📋 Pedidos Lançados")
-
-    orders = read_table(ORDERS_FILE)
-
-    if len(orders) == 0:
-        st.info("Nenhum pedido lançado.")
-        return
-
-    st.dataframe(orders, use_container_width=True)
-
-    st.download_button(
-        "⬇️ Baixar pedidos em Excel",
-        to_excel_bytes(orders),
-        file_name="pedidos_tigrao.xlsx",
-    )
-
-    edit_order()
-
-    if is_admin():
-        st.markdown("---")
-        st.markdown("### 🗑️ Excluir Pedido")
-
-        order_list = sorted(orders["pedido"].dropna().unique())
-        selected = st.selectbox("Selecione o número do pedido que deseja excluir", order_list)
-
-        order_data = orders[orders["pedido"] == selected]
-
-        if len(order_data):
-            st.warning(
-                f"Você está prestes a excluir o pedido nº {selected} "
-                f"do cliente {order_data['cliente'].iloc[0]}, "
-                f"total {money(order_data['total'].sum())}."
-            )
-
-        confirm = st.checkbox(f"Confirmo que desejo excluir o pedido nº {selected}")
-
-        if st.button("🗑️ EXCLUIR PEDIDO"):
-            if not confirm:
-                st.warning("Marque a confirmação antes de excluir.")
-            else:
-                orders = orders[orders["pedido"] != selected]
-                save_table(orders, ORDERS_FILE)
-
-                st.success(f"Pedido nº {selected} excluído com sucesso.")
-                st.rerun()
+        st.info("Nenhum pedido lançado ainda.")
