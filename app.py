@@ -5,6 +5,10 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+# =========================================================
+# CONFIGURAÇÃO
+# =========================================================
+
 st.set_page_config(
     page_title="Tigrão V2",
     page_icon="🐯",
@@ -17,37 +21,61 @@ ARQ_CLIENTES = f"{PASTA_DADOS}/clientes.xlsx"
 ARQ_PRODUTOS = f"{PASTA_DADOS}/produtos.xlsx"
 ARQ_PEDIDOS = f"{PASTA_DADOS}/pedidos.xlsx"
 ARQ_USUARIOS = f"{PASTA_DADOS}/usuarios.xlsx"
+
 COMISSAO_PADRAO = 0.07
 
+
+# =========================================================
+# BANCO DE DADOS
+# =========================================================
 
 def criar_banco():
     os.makedirs(PASTA_DADOS, exist_ok=True)
 
+    # Recria usuários padrão para não dar erro de login.
     usuarios = pd.DataFrame([
-        {"usuario": "admin", "senha": "admin123", "nome": "Administrador", "perfil": "ADMIN", "comissao": 0.07},
-        {"usuario": "vendedor", "senha": "123", "nome": "Vendedor", "perfil": "VENDEDOR", "comissao": 0.07},
+        {
+            "usuario": "admin",
+            "senha": "admin123",
+            "nome": "Administrador",
+            "perfil": "ADMIN",
+            "comissao": 0.07,
+        },
+        {
+            "usuario": "vendedor",
+            "senha": "123",
+            "nome": "Vendedor",
+            "perfil": "VENDEDOR",
+            "comissao": 0.07,
+        },
     ])
     usuarios.to_excel(ARQ_USUARIOS, index=False)
 
     if not os.path.exists(ARQ_CLIENTES):
-        pd.DataFrame([
+        clientes = pd.DataFrame([
             {"codigo": 1, "cliente": "NELSON DAS GALAXIAS", "cnpj": "", "telefone": "", "cidade": ""},
             {"codigo": 2, "cliente": "DROGANNE MEDICAMENTOS E PERFUMARIA LTDA", "cnpj": "", "telefone": "", "cidade": ""},
             {"codigo": 3, "cliente": "NATURA TERRA COMERCIO E SERVICOS LTDA", "cnpj": "", "telefone": "", "cidade": ""},
-        ]).to_excel(ARQ_CLIENTES, index=False)
+            {"codigo": 4, "cliente": "TESTE DE GRAVIDEZ", "cnpj": "", "telefone": "", "cidade": ""},
+        ])
+        clientes.to_excel(ARQ_CLIENTES, index=False)
 
     if not os.path.exists(ARQ_PRODUTOS):
-        pd.DataFrame([
-            {"codigo": "68.0", "produto": "BENETONICO 500M", "un": "UN", "preco": 10.21, "fornecedor": "ARTE NATIVA"},
-            {"codigo": "103.0", "produto": "APIS FRESH SPRAY EXTRA FORTE 35ML", "un": "UN", "preco": 5.82, "fornecedor": "ARTE NATIVA"},
-            {"codigo": "178.0", "produto": "BALDONI EXTRATO DE PROPOLIS VERDE 30ML", "un": "UN", "preco": 20.89, "fornecedor": "BALDONI"},
-        ]).to_excel(ARQ_PRODUTOS, index=False)
+        produtos = pd.DataFrame([
+            {"codigo": "68.0", "produto": "BENETONICO 500M", "un": "UN", "preco": 10.21, "fornecedor": "ARTE NATIVA", "imagem": ""},
+            {"codigo": "103.0", "produto": "APIS FRESH SPRAY EXTRA FORTE 35ML", "un": "UN", "preco": 5.82, "fornecedor": "ARTE NATIVA", "imagem": ""},
+            {"codigo": "126.0", "produto": "POTE DOCE BANANINHA ZERO AÇÚCAR", "un": "UN", "preco": 60.86, "fornecedor": "TIGRÃO", "imagem": ""},
+            {"codigo": "94.0", "produto": "HALLS EXTRA FORTE 8 UN", "un": "UN", "preco": 12.17, "fornecedor": "MONDELEZ", "imagem": ""},
+            {"codigo": "178.0", "produto": "BALDONI EXTRATO DE PROPOLIS VERDE 30ML", "un": "UN", "preco": 20.89, "fornecedor": "BALDONI", "imagem": ""},
+        ])
+        produtos.to_excel(ARQ_PRODUTOS, index=False)
 
     if not os.path.exists(ARQ_PEDIDOS):
-        pd.DataFrame(columns=[
-            "pedido", "data", "vendedor", "cliente", "codigo", "produto",
-            "un", "quantidade", "preco", "desconto", "subtotal", "total", "status"
-        ]).to_excel(ARQ_PEDIDOS, index=False)
+        pedidos = pd.DataFrame(columns=[
+            "pedido", "data", "vendedor", "cliente", "codigo", "produto", "un",
+            "quantidade", "preco", "desconto", "subtotal", "total", "status"
+        ])
+        pedidos.to_excel(ARQ_PEDIDOS, index=False)
 
 
 def ler_excel(caminho):
@@ -70,131 +98,219 @@ def dinheiro(valor):
 
 def numero_pedido():
     pedidos = ler_excel(ARQ_PEDIDOS)
+
     if len(pedidos) == 0 or "pedido" not in pedidos.columns:
         return 1
+
     maior = pd.to_numeric(pedidos["pedido"], errors="coerce").max()
+
     if pd.isna(maior):
         return 1
+
     return int(maior) + 1
 
+
+def resumo_pedidos(pedidos):
+    if len(pedidos) == 0 or "pedido" not in pedidos.columns:
+        return pd.DataFrame(columns=["pedido", "data", "vendedor", "cliente", "total", "status"])
+
+    return pedidos.groupby("pedido", as_index=False).agg({
+        "data": "first",
+        "vendedor": "first",
+        "cliente": "first",
+        "total": "sum",
+        "status": "first",
+    })
+
+
+# =========================================================
+# CSS / LAYOUT
+# =========================================================
 
 def css():
     st.markdown("""
     <style>
-    header, footer, [data-testid="stSidebar"] {display:none!important;}
-    [data-testid="stAppViewContainer"] {background:#f4f5f7!important;}
-    .block-container {max-width:1024px!important;padding:0 0 118px 0!important;}
-    * {font-family:Arial, sans-serif;}
-
-    .top-wrap {
-        background:#111;
-        border-radius:0 0 36px 36px;
-        overflow:hidden;
-        box-shadow:0 10px 28px rgba(0,0,0,.28);
+    header, footer, [data-testid="stSidebar"] {
+        display:none !important;
     }
 
-    .top-black {
-        background:linear-gradient(180deg,#111,#1a1a1a);
-        padding:22px 36px 10px 36px;
-        position:relative;
+    [data-testid="stAppViewContainer"] {
+        background:#f3f4f6 !important;
     }
 
-    .top-row {
+    .block-container {
+        max-width:1024px !important;
+        padding:0 0 115px 0 !important;
+    }
+
+    * {
+        font-family: Arial, sans-serif;
+        box-sizing:border-box;
+    }
+
+    h1, h2, h3, p, label, span, div {
+        color:#111827;
+    }
+
+    /* =========================
+       LOGIN
+    ========================= */
+
+    .login-wrap {
+        min-height:78vh;
         display:flex;
-        justify-content:space-between;
+        flex-direction:column;
+        justify-content:center;
         align-items:center;
-        color:white;
+        padding:22px;
+    }
+
+    .login-logo {
+        text-align:center;
+        margin-bottom:34px;
+    }
+
+    .login-logo .tiger {
+        font-size:70px;
+        line-height:1;
+        margin-bottom:12px;
+    }
+
+    .login-logo .name {
+        font-size:54px;
+        font-weight:1000;
+        letter-spacing:2px;
+        color:#111827;
+    }
+
+    .login-logo .sub {
+        font-size:21px;
+        color:#ff8500;
+        letter-spacing:10px;
+        font-weight:1000;
+        margin-top:12px;
+    }
+
+    .login-box {
+        width:100%;
+        max-width:440px;
+    }
+
+    .login-box label {
+        color:#111827 !important;
+        font-weight:900 !important;
+        font-size:15px !important;
+    }
+
+    .login-box input {
+        background:white !important;
+        border:2px solid #d1d5db !important;
+        color:#111827 !important;
+        height:56px !important;
+        border-radius:18px !important;
+        font-size:18px !important;
+        font-weight:800 !important;
+    }
+
+    /* =========================
+       TOPO
+    ========================= */
+
+    .topbar {
+        background:#111;
+        min-height:126px;
+        padding:18px 40px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        box-shadow:0 6px 22px rgba(0,0,0,.28);
     }
 
     .hamb {
-        color:#ff8500;
-        font-size:38px;
+        color:#ff8500 !important;
+        font-size:40px;
         font-weight:1000;
+        line-height:1;
     }
 
     .brand {
         display:flex;
         align-items:center;
-        gap:12px;
-        justify-content:center;
-        color:white;
-        font-weight:1000;
-        font-size:38px;
-        letter-spacing:2px;
+        gap:14px;
+        color:white !important;
     }
 
-    .brand .tiger {
-        width:66px;
-        height:66px;
-        border:2px solid white;
+    .brand-icon {
+        width:68px;
+        height:68px;
+        border:2px solid #fff;
         border-radius:50%;
+        background:#111;
         display:flex;
         align-items:center;
         justify-content:center;
         font-size:42px;
-        background:#111;
     }
 
-    .brand small {
-        display:block;
-        color:#ff8500;
-        font-size:13px;
-        letter-spacing:8px;
-        margin-top:2px;
-    }
-
-    .perfil {
-        border:3px solid #ff8500;
-        border-radius:30px;
-        color:white;
-        padding:10px 17px;
+    .brand-name {
+        color:white !important;
+        font-size:42px;
         font-weight:1000;
-        font-size:16px;
+        font-style:italic;
+        letter-spacing:1px;
+        line-height:1;
     }
 
-    .orange {
+    .brand-sub {
+        color:#ff8500 !important;
+        font-size:14px;
+        font-weight:1000;
+        letter-spacing:8px;
+        margin-top:8px;
+    }
+
+    .perfil-pill {
+        color:white !important;
+        border:3px solid #ff8500;
+        border-radius:35px;
+        padding:12px 18px;
+        font-size:18px;
+        font-weight:1000;
+        display:flex;
+        align-items:center;
+        gap:8px;
+    }
+
+    .hero {
         background:linear-gradient(135deg,#ff8500,#ff9d1c);
         padding:40px 40px 96px 40px;
         position:relative;
         overflow:hidden;
-        border-radius:0 0 0 0;
     }
 
-    .orange:before {
-        content:"";
-        position:absolute;
-        top:-30px;
-        left:0;
-        width:100%;
-        height:58px;
-        background:#111;
-        border-radius:0 0 50% 50%;
-        z-index:1;
-    }
-
-    .orange:after {
+    .hero::after {
         content:"🐯";
         position:absolute;
-        right:70px;
-        top:8px;
-        font-size:180px;
-        opacity:.13;
+        right:62px;
+        top:0px;
+        font-size:185px;
+        opacity:.14;
     }
 
-    .orange h1 {
+    .hero h1 {
         margin:0;
-        color:#111;
+        color:#111827 !important;
         font-size:46px;
         font-weight:1000;
         position:relative;
         z-index:2;
     }
 
-    .orange p {
+    .hero p {
+        color:#111827 !important;
         margin:12px 0 0 0;
-        color:#111;
-        font-size:22px;
-        font-weight:500;
+        font-size:23px;
+        font-weight:600;
         position:relative;
         z-index:2;
     }
@@ -206,6 +322,16 @@ def css():
         z-index:10;
     }
 
+    .conteudo-normal {
+        padding:32px 28px 0 28px;
+        position:relative;
+        z-index:10;
+    }
+
+    /* =========================
+       CARDS
+    ========================= */
+
     .cards {
         display:grid;
         grid-template-columns:repeat(3,1fr);
@@ -215,8 +341,8 @@ def css():
     .metric-card {
         background:white;
         border-radius:24px;
-        padding:26px 16px;
         min-height:190px;
+        padding:26px 16px;
         text-align:center;
         box-shadow:0 8px 24px rgba(15,23,42,.13);
     }
@@ -226,139 +352,369 @@ def css():
         height:78px;
         background:#111;
         border-radius:20px;
+        color:#ff8500 !important;
         display:inline-flex;
         align-items:center;
         justify-content:center;
-        color:#ff8500;
         font-size:40px;
         margin-bottom:14px;
     }
 
     .metric-title {
-        color:#777;
+        color:#777 !important;
         font-size:17px;
         font-weight:1000;
     }
 
     .metric-value {
-        color:#111;
+        color:#111827 !important;
         font-size:30px;
         font-weight:1000;
         margin-top:12px;
     }
 
     .metric-sub {
-        color:#ff8500;
+        color:#ff8500 !important;
         font-size:16px;
         font-weight:900;
         margin-top:12px;
     }
 
-    .secao {
+    .section-title {
         margin-top:34px;
-        color:#111;
-        font-size:30px;
+        color:#111827 !important;
+        font-size:32px;
         font-weight:1000;
+        display:flex;
+        align-items:center;
+        gap:12px;
     }
 
-    .linha-laranja {
-        width:56px;
-        height:4px;
+    .section-line {
+        width:80px;
+        height:5px;
+        border-radius:10px;
         background:#ff8500;
-        border-radius:8px;
-        margin:8px 0 14px 0;
+        margin:12px 0 24px 0;
     }
 
-    .box, .table-box {
+    .box {
+        background:white;
+        border-radius:24px;
+        padding:22px;
+        box-shadow:0 8px 24px rgba(15,23,42,.10);
+        margin-bottom:18px;
+        color:#111827 !important;
+    }
+
+    .box * {
+        color:#111827 !important;
+    }
+
+    /* =========================
+       TABELA DASHBOARD
+    ========================= */
+
+    .orders-table {
         background:white;
         border-radius:24px;
         padding:18px;
         box-shadow:0 8px 24px rgba(15,23,42,.10);
-        margin-bottom:18px;
-        color:#111827!important;
+        overflow-x:auto;
     }
 
-    .box * {color:#111827!important;}
-
-    .order-grid {
+    .order-row {
         display:grid;
-        grid-template-columns:80px 1.4fr 1.5fr 1fr 110px;
-        gap:10px;
+        grid-template-columns:90px 1.5fr 1.3fr 1.4fr 1fr;
+        gap:12px;
         align-items:center;
-        padding:15px 12px;
+        padding:16px 14px;
         border-bottom:1px solid #eee;
-        font-size:15px;
-        color:#111;
+        font-size:16px;
     }
 
     .order-head {
         background:#111;
-        color:#ff8500!important;
+        color:#ff8500 !important;
         border-radius:16px 16px 0 0;
         font-weight:1000;
     }
 
-    .orange-money {
-        color:#ff8500!important;
+    .order-head div {
+        color:#ff8500 !important;
+    }
+
+    .money-orange {
+        color:#ff8500 !important;
         font-weight:1000;
     }
 
-    .pill-pendente {
+    .status-pendente {
         background:#fff0bd;
-        color:#9a6500!important;
+        color:#9a6500 !important;
         padding:8px 10px;
         border-radius:10px;
+        font-size:13px;
         font-weight:1000;
         text-align:center;
-        font-size:13px;
     }
 
-    .pill-faturado {
+    .status-faturado {
         background:#d8f7d1;
-        color:#118022!important;
+        color:#118022 !important;
         padding:8px 10px;
         border-radius:10px;
+        font-size:13px;
         font-weight:1000;
         text-align:center;
-        font-size:13px;
     }
 
-    .produto-card {
+    /* =========================
+       NOVO PEDIDO
+    ========================= */
+
+    .form-card {
+        background:white;
+        border-radius:24px;
+        padding:22px;
+        box-shadow:0 8px 24px rgba(15,23,42,.10);
+        margin-bottom:22px;
+    }
+
+    .produto-preview {
+        background:white;
         border:2px solid #ff8500;
         border-radius:18px;
         padding:14px;
-        margin:12px 0;
-        background:white;
-        color:#111827;
+        margin:14px 0;
         font-weight:800;
     }
 
-    .produto-card b {color:#0b8de3!important;}
+    .produto-preview b {
+        color:#0b8de3 !important;
+    }
 
     .total-item {
         background:#0b8de3;
         border-radius:22px;
         padding:18px;
         text-align:center;
-        margin:14px 0;
+        margin:16px 0;
     }
 
-    .total-item * {color:white!important;}
-    .total-label {font-size:13px;font-weight:1000;}
-    .total-value {font-size:34px;font-weight:1000;margin-top:8px;}
+    .total-item * {
+        color:white !important;
+    }
+
+    .total-label {
+        font-size:13px;
+        font-weight:1000;
+    }
+
+    .total-value {
+        font-size:36px;
+        font-weight:1000;
+        margin-top:8px;
+    }
+
+    /* =========================
+       CARRINHO
+    ========================= */
+
+    .cart-client {
+        background:white;
+        border-radius:20px;
+        padding:16px 22px;
+        box-shadow:0 8px 22px rgba(15,23,42,.10);
+        margin-bottom:20px;
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        font-size:23px;
+        font-weight:800;
+    }
+
+    .cart-client b {
+        color:#ff8500 !important;
+        font-weight:1000;
+    }
+
+    .cart-panel {
+        background:white;
+        border-radius:24px;
+        padding:24px 28px;
+        box-shadow:0 8px 24px rgba(15,23,42,.13);
+        margin-bottom:22px;
+    }
+
+    .cart-item {
+        display:grid;
+        grid-template-columns:135px 1fr;
+        gap:22px;
+        padding:18px 0;
+        border-bottom:1px solid #e5e7eb;
+    }
+
+    .cart-item:last-child {
+        border-bottom:none;
+    }
+
+    .cart-left {
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        gap:14px;
+    }
+
+    .product-img {
+        width:95px;
+        height:75px;
+        border-radius:14px;
+        background:#f3f4f6;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:52px;
+        overflow:hidden;
+    }
+
+    .trash-red {
+        width:60px;
+        height:60px;
+        border-radius:16px;
+        background:linear-gradient(135deg,#ff3434,#df1f1f);
+        color:white !important;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:30px;
+        box-shadow:0 6px 14px rgba(239,68,68,.30);
+    }
+
+    .cart-name {
+        color:#111827 !important;
+        font-size:24px;
+        font-weight:1000;
+        line-height:1.15;
+        margin-top:4px;
+    }
+
+    .cart-code {
+        color:#6b7280 !important;
+        font-size:19px;
+        font-weight:700;
+        margin-top:12px;
+    }
+
+    .cart-grid {
+        display:grid;
+        grid-template-columns:1fr 1fr 1fr;
+        gap:18px;
+        align-items:center;
+        margin-top:26px;
+    }
+
+    .cart-label {
+        color:#111827 !important;
+        font-size:18px;
+        font-weight:700;
+        margin-bottom:10px;
+    }
+
+    .qty-box {
+        display:flex;
+        align-items:center;
+        gap:18px;
+    }
+
+    .qty-btn {
+        width:58px;
+        height:58px;
+        border-radius:14px;
+        background:#f0f2f5;
+        color:#2b7de9 !important;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:33px;
+        font-weight:1000;
+    }
+
+    .qty-num {
+        min-width:35px;
+        text-align:center;
+        color:#111827 !important;
+        font-size:29px;
+        font-weight:1000;
+    }
+
+    .cart-price {
+        color:#111827 !important;
+        font-size:26px;
+        font-weight:1000;
+    }
+
+    .cart-total {
+        color:#ff8500 !important;
+        font-size:31px;
+        font-weight:1000;
+    }
 
     .resumo {
-        background:#111827;
-        border-radius:22px;
-        padding:18px;
-        margin-top:16px;
+        background:linear-gradient(135deg,#111827,#10131a);
+        border-radius:24px;
+        padding:28px;
+        box-shadow:0 8px 24px rgba(15,23,42,.16);
+        margin-bottom:24px;
     }
 
-    .resumo * {color:white!important;}
-    .resumo-row {display:flex;justify-content:space-between;font-weight:1000;margin-bottom:10px;}
-    .resumo-total {border-top:1px solid rgba(255,255,255,.25);padding-top:12px;font-size:22px;}
+    .resumo-row {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:20px;
+        font-size:28px;
+        font-weight:1000;
+    }
 
-    .bottom-space {height:100px;}
+    .resumo-row span {
+        color:white !important;
+    }
+
+    .resumo-row .orange-total {
+        color:#ff8500 !important;
+    }
+
+    .resumo-line {
+        height:1px;
+        background:rgba(255,255,255,.22);
+        margin:18px 0 24px 0;
+    }
+
+    .resumo-final {
+        font-size:42px;
+    }
+
+    .btn-finalizar {
+        background:linear-gradient(135deg,#2f8fe9,#2380d8);
+        border-radius:18px;
+        padding:22px;
+        text-align:center;
+        color:white !important;
+        font-size:28px;
+        font-weight:1000;
+        margin-bottom:28px;
+        box-shadow:0 7px 18px rgba(47,143,233,.28);
+    }
+
+    /* =========================
+       BOTTOM NAV
+    ========================= */
+
+    .bottom-space {
+        height:110px;
+    }
 
     .bottom-nav {
         position:fixed;
@@ -375,51 +731,231 @@ def css():
     }
 
     .stButton > button {
-        border-radius:16px!important;
-        min-height:46px!important;
-        font-weight:900!important;
-        border:none!important;
-        background:#0b8de3!important;
-        color:white!important;
+        border-radius:16px !important;
+        min-height:48px !important;
+        font-weight:900 !important;
+        border:none !important;
+        background:#0b8de3 !important;
+        color:white !important;
     }
 
     .bottom-nav .stButton > button {
-        background:transparent!important;
-        color:white!important;
-        box-shadow:none!important;
-        font-size:13px!important;
-        padding:4px!important;
+        background:transparent !important;
+        color:white !important;
+        box-shadow:none !important;
+        font-size:13px !important;
+        padding:4px !important;
     }
 
-    input, textarea {border-radius:16px!important;min-height:48px!important;font-weight:800!important;}
-    div[data-baseweb="select"] > div {border-radius:16px!important;min-height:48px!important;}
-    div[data-baseweb="popover"] {z-index:9999999!important;}
-    div[data-baseweb="popover"] * {background:white!important;color:#111827!important;}
-    ul[role="listbox"] {background:white!important;}
-    li[role="option"] {background:white!important;color:#111827!important;font-weight:800!important;}
+    label {
+        color:#111827 !important;
+        font-weight:900 !important;
+    }
+
+    input, textarea {
+        background:white !important;
+        color:#111827 !important;
+        border-radius:16px !important;
+        min-height:50px !important;
+        font-weight:800 !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        background:white !important;
+        color:#111827 !important;
+        border-radius:16px !important;
+        min-height:50px !important;
+    }
+
+    div[data-baseweb="popover"] {
+        z-index:9999999 !important;
+    }
+
+    div[data-baseweb="popover"] * {
+        background:white !important;
+        color:#111827 !important;
+    }
+
+    ul[role="listbox"] {
+        background:white !important;
+    }
+
+    li[role="option"] {
+        background:white !important;
+        color:#111827 !important;
+        font-weight:800 !important;
+    }
 
     @media(max-width:720px) {
-        .block-container {max-width:100%!important;}
-        .top-black {padding:20px 26px 8px 26px;}
-        .hamb {font-size:32px;}
-        .brand {font-size:30px;gap:8px;}
-        .brand .tiger {width:46px;height:46px;font-size:30px;}
-        .brand small {font-size:11px;letter-spacing:6px;}
-        .perfil {font-size:13px;padding:8px 12px;}
-        .orange {padding:34px 32px 86px 32px;}
-        .orange h1 {font-size:36px;}
-        .orange p {font-size:18px;}
-        .orange:after {right:20px;font-size:150px;}
-        .conteudo {padding:0 18px;margin-top:-62px;}
-        .cards {grid-template-columns:1fr;}
-        .metric-card {min-height:140px;}
-        .order-grid {grid-template-columns:58px 1.2fr 1.4fr 1fr;font-size:13px;}
-        .order-grid div:nth-child(2) {display:none;}
-        .secao {font-size:28px;}
+        .block-container {
+            max-width:100% !important;
+        }
+
+        .topbar {
+            min-height:105px;
+            padding:16px 24px;
+        }
+
+        .hamb {
+            font-size:34px;
+        }
+
+        .brand {
+            gap:8px;
+        }
+
+        .brand-icon {
+            width:48px;
+            height:48px;
+            font-size:30px;
+        }
+
+        .brand-name {
+            font-size:31px;
+        }
+
+        .brand-sub {
+            font-size:11px;
+            letter-spacing:5px;
+            margin-top:5px;
+        }
+
+        .perfil-pill {
+            font-size:13px;
+            padding:8px 12px;
+        }
+
+        .hero {
+            padding:34px 32px 88px 32px;
+        }
+
+        .hero h1 {
+            font-size:38px;
+        }
+
+        .hero p {
+            font-size:18px;
+        }
+
+        .hero::after {
+            right:15px;
+            font-size:145px;
+        }
+
+        .conteudo {
+            padding:0 18px;
+            margin-top:-62px;
+        }
+
+        .conteudo-normal {
+            padding:28px 18px 0 18px;
+        }
+
+        .cards {
+            grid-template-columns:1fr;
+        }
+
+        .metric-card {
+            min-height:145px;
+        }
+
+        .order-row {
+            grid-template-columns:60px 1.2fr 1.2fr 1fr;
+            font-size:13px;
+        }
+
+        .order-row div:nth-child(2) {
+            display:none;
+        }
+
+        .section-title {
+            font-size:34px;
+        }
+
+        .cart-client {
+            font-size:18px;
+            padding:14px 16px;
+        }
+
+        .cart-panel {
+            padding:18px 16px;
+        }
+
+        .cart-item {
+            grid-template-columns:82px 1fr;
+            gap:14px;
+            padding:18px 0;
+        }
+
+        .product-img {
+            width:70px;
+            height:58px;
+            font-size:38px;
+        }
+
+        .trash-red {
+            width:52px;
+            height:52px;
+            font-size:25px;
+        }
+
+        .cart-name {
+            font-size:21px;
+        }
+
+        .cart-code {
+            font-size:16px;
+        }
+
+        .cart-grid {
+            grid-template-columns:1fr;
+            gap:12px;
+            margin-top:20px;
+        }
+
+        .cart-label {
+            font-size:15px;
+            margin-bottom:8px;
+        }
+
+        .qty-btn {
+            width:46px;
+            height:46px;
+            font-size:28px;
+        }
+
+        .qty-num {
+            font-size:25px;
+        }
+
+        .cart-price {
+            font-size:24px;
+        }
+
+        .cart-total {
+            font-size:27px;
+        }
+
+        .resumo-row {
+            font-size:24px;
+        }
+
+        .resumo-final {
+            font-size:35px;
+        }
+
+        .btn-finalizar {
+            font-size:24px;
+            padding:20px;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
 
+
+# =========================================================
+# LOGIN
+# =========================================================
 
 def login():
     if "logado" not in st.session_state:
@@ -428,17 +964,18 @@ def login():
     if st.session_state.logado:
         return
 
-    st.markdown("<br><br>", unsafe_allow_html=True)
     st.markdown("""
-    <div style="text-align:center;">
-        <div style="font-size:70px;">🐯</div>
-        <h1 style="margin-bottom:0;color:#111;">TIGRÃO</h1>
-        <p style="color:#ff8500;font-weight:1000;letter-spacing:5px;">DISTRIBUIDORA</p>
-    </div>
+    <div class="login-wrap">
+        <div class="login-logo">
+            <div class="tiger">🐯</div>
+            <div class="name">TIGRÃO</div>
+            <div class="sub">DISTRIBUIDORA</div>
+        </div>
+        <div class="login-box">
     """, unsafe_allow_html=True)
 
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
+    usuario = st.text_input("Usuário", key="login_usuario")
+    senha = st.text_input("Senha", type="password", key="login_senha")
 
     if st.button("ENTRAR", use_container_width=True):
         usuarios = ler_excel(ARQ_USUARIOS)
@@ -468,42 +1005,53 @@ def login():
             st.session_state.form_key = 0
             st.rerun()
 
+    st.markdown("""
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     st.stop()
 
 
-def topo(titulo, subtitulo):
+# =========================================================
+# UI
+# =========================================================
+
+def topo(titulo=None, subtitulo=None, mostrar_hero=True):
     perfil = st.session_state.get("perfil", "VENDEDOR")
 
-    html = f"""
-    <div class="top-wrap">
-        <div class="top-black">
-            <div class="top-row">
-                <div class="hamb">☰</div>
-                <div class="brand">
-                    <div class="tiger">🐯</div>
-                    <div>
-                        TIGRÃO
-                        <small>DISTRIBUIDORA</small>
-                    </div>
-                </div>
-                <div class="perfil">👤 {perfil}</div>
+    st.markdown(f"""
+    <div class="topbar">
+        <div class="hamb">☰</div>
+
+        <div class="brand">
+            <div class="brand-icon">🐯</div>
+            <div>
+                <div class="brand-name">TIGRÃO</div>
+                <div class="brand-sub">DISTRIBUIDORA</div>
             </div>
         </div>
-        <div class="orange">
+
+        <div class="perfil-pill">👤 {perfil}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if mostrar_hero:
+        st.markdown(f"""
+        <div class="hero">
             <h1>{titulo}</h1>
             <p>{subtitulo}</p>
         </div>
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
 
-def abrir():
-    st.markdown('<div class="conteudo">', unsafe_allow_html=True)
+def abrir(sobrepor=True):
+    classe = "conteudo" if sobrepor else "conteudo-normal"
+    st.markdown(f'<div class="{classe}">', unsafe_allow_html=True)
 
 
 def fechar():
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def mudar_menu(nome):
@@ -517,12 +1065,13 @@ def menu_inferior():
     itens = [
         ("Dashboard", "📊 Dashboard"),
         ("Novo Pedido", "🛒 Novo Pedido"),
-        ("Pedidos", "📦 Pedidos"),
+        ("Pedidos", "📋 Pedidos"),
         ("Comissão", "💰 Comissão"),
         ("Mais", "⋯ Mais"),
     ]
 
     cols = st.columns(len(itens))
+
     for col, (destino, texto) in zip(cols, itens):
         with col:
             if st.button(texto, key=f"nav_{destino}", use_container_width=True):
@@ -531,22 +1080,27 @@ def menu_inferior():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def resumo_pedidos(pedidos):
-    if len(pedidos) == 0 or "pedido" not in pedidos.columns:
-        return pd.DataFrame(columns=["pedido", "data", "vendedor", "cliente", "total", "status"])
+def produto_emoji(nome):
+    nome = str(nome).upper()
 
-    return pedidos.groupby("pedido", as_index=False).agg({
-        "data": "first",
-        "vendedor": "first",
-        "cliente": "first",
-        "total": "sum",
-        "status": "first",
-    })
+    if "BANAN" in nome or "DOCE" in nome:
+        return "🍯"
+    if "HALLS" in nome or "MENTA" in nome or "BALAS" in nome:
+        return "🍬"
+    if "PROPOLIS" in nome or "SPRAY" in nome:
+        return "🍶"
+    if "CHA" in nome or "CHÁ" in nome:
+        return "🍵"
+    return "📦"
 
+
+# =========================================================
+# TELAS
+# =========================================================
 
 def dashboard():
-    topo("Dashboard", "Visão geral da operação")
-    abrir()
+    topo("Dashboard", "Visão geral da operação", mostrar_hero=True)
+    abrir(sobrepor=True)
 
     pedidos = ler_excel(ARQ_PEDIDOS)
     vendedor = st.session_state.get("nome", "")
@@ -569,12 +1123,14 @@ def dashboard():
             <div class="metric-value">{total_pedidos}</div>
             <div class="metric-sub">Total de pedidos</div>
         </div>
+
         <div class="metric-card">
             <div class="metric-icon">💲</div>
             <div class="metric-title">VENDAS</div>
             <div class="metric-value">{dinheiro(total_vendas)}</div>
             <div class="metric-sub">Valor total de vendas</div>
         </div>
+
         <div class="metric-card">
             <div class="metric-icon">%</div>
             <div class="metric-title">COMISSÃO 7%</div>
@@ -584,18 +1140,18 @@ def dashboard():
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="secao">🕘 Últimos pedidos</div><div class="linha-laranja"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🕘 Últimos pedidos</div><div class="section-line"></div>', unsafe_allow_html=True)
 
     resumo = resumo_pedidos(pedidos_view).tail(6).sort_values("pedido", ascending=False)
 
-    st.markdown('<div class="table-box">', unsafe_allow_html=True)
+    st.markdown('<div class="orders-table">', unsafe_allow_html=True)
     st.markdown("""
-    <div class="order-grid order-head">
+    <div class="order-row order-head">
         <div>PEDIDO</div>
         <div>DATA</div>
+        <div>VENDEDOR</div>
         <div>CLIENTE</div>
         <div>TOTAL</div>
-        <div>STATUS</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -603,15 +1159,13 @@ def dashboard():
         st.info("Nenhum pedido lançado.")
     else:
         for _, row in resumo.iterrows():
-            status = str(row["status"]).upper()
-            classe = "pill-faturado" if status == "FATURADO" else "pill-pendente"
             st.markdown(f"""
-            <div class="order-grid">
+            <div class="order-row">
                 <div>{row["pedido"]}</div>
                 <div>{row["data"]}</div>
+                <div>{row["vendedor"]}</div>
                 <div>{row["cliente"]}</div>
-                <div class="orange-money">{dinheiro(row["total"])}</div>
-                <div><span class="{classe}">{status}</span></div>
+                <div class="money-orange">{dinheiro(row["total"])}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -620,8 +1174,8 @@ def dashboard():
 
 
 def novo_pedido():
-    topo("Novo Pedido", "Lançamento rápido de pedidos")
-    abrir()
+    topo("Novo Pedido", "Lançamento rápido de pedidos", mostrar_hero=True)
+    abrir(sobrepor=True)
 
     clientes = ler_excel(ARQ_CLIENTES)
     produtos = ler_excel(ARQ_PRODUTOS)
@@ -632,14 +1186,24 @@ def novo_pedido():
     if "form_key" not in st.session_state:
         st.session_state.form_key = 0
 
-    st.markdown('<div class="box">', unsafe_allow_html=True)
+    st.markdown('<div class="form-card">', unsafe_allow_html=True)
 
     lista_clientes = clientes["cliente"].astype(str).tolist() if len(clientes) else ["CLIENTE PADRÃO"]
+
     cliente = st.selectbox("Cliente", lista_clientes, key="cliente_pedido")
 
     fornecedores = ["Todos"]
+
     if len(produtos) and "fornecedor" in produtos.columns:
-        fornecedores += sorted(produtos["fornecedor"].fillna("").astype(str).replace("", pd.NA).dropna().unique().tolist())
+        fornecedores += sorted(
+            produtos["fornecedor"]
+            .fillna("")
+            .astype(str)
+            .replace("", pd.NA)
+            .dropna()
+            .unique()
+            .tolist()
+        )
 
     fornecedor = st.selectbox("Fornecedor", fornecedores, key="fornecedor_pedido")
 
@@ -649,19 +1213,27 @@ def novo_pedido():
         produtos_filtrados = produtos.copy()
 
     opcoes_produtos = ["Selecione o produto"]
-    for _, row in produtos_filtrados.iterrows():
-        opcoes_produtos.append(f'{row["codigo"]} - {row["produto"]} | {dinheiro(row["preco"])}')
 
-    produto_txt = st.selectbox("Produto", opcoes_produtos, key=f"produto_pedido_{st.session_state.form_key}")
+    for _, row in produtos_filtrados.iterrows():
+        opcoes_produtos.append(
+            f'{row["codigo"]} - {row["produto"]} | {dinheiro(row["preco"])}'
+        )
+
+    produto_txt = st.selectbox(
+        "Produto",
+        opcoes_produtos,
+        key=f"produto_pedido_{st.session_state.form_key}"
+    )
 
     produto = None
+
     if produto_txt != "Selecione o produto":
         idx = opcoes_produtos.index(produto_txt) - 1
         produto = produtos_filtrados.iloc[idx].to_dict()
 
     if produto:
         st.markdown(f"""
-        <div class="produto-card">
+        <div class="produto-preview">
             <b>{produto["produto"]}</b><br>
             Código: {produto["codigo"]}<br>
             Fornecedor: {produto["fornecedor"]}<br>
@@ -669,8 +1241,21 @@ def novo_pedido():
         </div>
         """, unsafe_allow_html=True)
 
-    qtd = st.number_input("Quantidade", min_value=0, value=0, step=1, key=f"qtd_pedido_{st.session_state.form_key}")
-    desc = st.number_input("% Desconto", min_value=0.0, value=0.0, step=1.0, key=f"desc_pedido_{st.session_state.form_key}")
+    qtd = st.number_input(
+        "Quantidade",
+        min_value=0,
+        value=0,
+        step=1,
+        key=f"qtd_pedido_{st.session_state.form_key}"
+    )
+
+    desc = st.number_input(
+        "% Desconto",
+        min_value=0.0,
+        value=0.0,
+        step=1.0,
+        key=f"desc_pedido_{st.session_state.form_key}"
+    )
 
     preco = float(produto["preco"]) if produto else 0
     subtotal = preco * qtd
@@ -699,54 +1284,93 @@ def novo_pedido():
                 "subtotal": subtotal,
                 "total": total,
             })
+
             st.session_state.form_key += 1
             st.success("Produto adicionado.")
-            time.sleep(0.3)
+            time.sleep(0.25)
             st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
     carrinho(cliente)
     fechar()
 
 
 def carrinho(cliente):
-    st.markdown('<div class="secao">📦 Carrinho</div><div class="linha-laranja"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📦 Carrinho</div><div class="section-line"></div>', unsafe_allow_html=True)
 
     if len(st.session_state.carrinho) == 0:
         st.info("Nenhum produto adicionado.")
         return
 
-    st.markdown('<div class="table-box">', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="cart-client">
+        <div>👤 Cliente: <b>{cliente}</b></div>
+        <div>⌄</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="cart-panel">', unsafe_allow_html=True)
+
     for i, item in enumerate(st.session_state.carrinho):
-        col1, col2, col3, col4, col5 = st.columns([0.4, 2.4, 0.7, 1, 1])
+        nome = item["produto"]
+        codigo = item["codigo"]
+        qtd = int(item["quantidade"])
+        preco = float(item["preco"])
+        total = float(item["total"])
+        emoji = produto_emoji(nome)
 
-        with col1:
-            if st.button("🗑", key=f"del_{i}"):
-                st.session_state.carrinho.pop(i)
-                st.rerun()
+        st.markdown(f"""
+        <div class="cart-item">
+            <div class="cart-left">
+                <div class="product-img">{emoji}</div>
+                <div class="trash-red">🗑</div>
+            </div>
 
-        with col2:
-            st.markdown(f"**{item['produto']}**  \n<small>Cód: {item['codigo']}</small>", unsafe_allow_html=True)
-        with col3:
-            st.write(int(item["quantidade"]))
-        with col4:
-            st.write(dinheiro(item["preco"]))
-        with col5:
-            st.markdown(f"<b style='color:#ff8500'>{dinheiro(item['total'])}</b>", unsafe_allow_html=True)
+            <div>
+                <div class="cart-name">{nome}</div>
+                <div class="cart-code">Cód: {codigo}</div>
 
-        st.divider()
+                <div class="cart-grid">
+                    <div>
+                        <div class="cart-label">Quantidade</div>
+                        <div class="qty-box">
+                            <div class="qty-btn">−</div>
+                            <div class="qty-num">{qtd}</div>
+                            <div class="qty-btn">+</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="cart-label">Preço unit.</div>
+                        <div class="cart-price">{dinheiro(preco)}</div>
+                    </div>
+
+                    <div>
+                        <div class="cart-label">Total</div>
+                        <div class="cart-total">{dinheiro(total)}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button(f"Remover {nome}", key=f"remover_{i}", use_container_width=True):
+            st.session_state.carrinho.pop(i)
+            st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    subtotal = sum(x["subtotal"] for x in st.session_state.carrinho)
-    total = sum(x["total"] for x in st.session_state.carrinho)
+    subtotal = sum(float(x["subtotal"]) for x in st.session_state.carrinho)
+    total = sum(float(x["total"]) for x in st.session_state.carrinho)
     desconto = subtotal - total
 
     st.markdown(f"""
     <div class="resumo">
         <div class="resumo-row"><span>Subtotal</span><span>{dinheiro(subtotal)}</span></div>
-        <div class="resumo-row"><span>Desconto</span><span>{dinheiro(desconto)}</span></div>
-        <div class="resumo-row resumo-total"><span>Total</span><span>{dinheiro(total)}</span></div>
+        <div class="resumo-row"><span>Desconto</span><span class="orange-total">{dinheiro(desconto)}</span></div>
+        <div class="resumo-line"></div>
+        <div class="resumo-row resumo-final"><span>Total</span><span class="orange-total">{dinheiro(total)}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -757,6 +1381,7 @@ def carrinho(cliente):
         vendedor = st.session_state.get("nome", "Vendedor")
 
         linhas = []
+
         for item in st.session_state.carrinho:
             linhas.append({
                 "pedido": numero,
@@ -779,6 +1404,7 @@ def carrinho(cliente):
 
         st.session_state.carrinho = []
         st.session_state.form_key += 1
+
         st.success(f"Pedido nº {numero} salvo com sucesso!")
         time.sleep(0.8)
         st.rerun()
@@ -790,8 +1416,8 @@ def carrinho(cliente):
 
 
 def pedidos_tela():
-    topo("Pedidos", "Pedidos lançados")
-    abrir()
+    topo("Pedidos", "Pedidos lançados", mostrar_hero=True)
+    abrir(sobrepor=True)
 
     pedidos = ler_excel(ARQ_PEDIDOS)
     vendedor = st.session_state.get("nome", "")
@@ -809,6 +1435,7 @@ def pedidos_tela():
 
     for _, row in resumo.iterrows():
         status = str(row["status"]).upper()
+
         st.markdown(f"""
         <div class="box">
             <b>Pedido #{row["pedido"]}</b><br>
@@ -829,8 +1456,8 @@ def pedidos_tela():
 
 
 def editar_pedido():
-    topo("Editar Pedido", "Alterar pedido pendente")
-    abrir()
+    topo("Editar Pedido", "Alterar pedido pendente", mostrar_hero=True)
+    abrir(sobrepor=True)
 
     numero = st.session_state.get("pedido_editando")
     pedidos = ler_excel(ARQ_PEDIDOS)
@@ -842,25 +1469,41 @@ def editar_pedido():
         return
 
     status = str(dados["status"].iloc[0]).upper()
+
     if status == "FATURADO" and st.session_state.get("perfil") != "ADMIN":
         st.error("Pedido faturado não pode ser alterado pelo vendedor.")
         fechar()
         return
 
     st.info(f"Pedido #{numero} - {dados['cliente'].iloc[0]}")
+
     novos = []
 
     for idx, row in dados.iterrows():
         st.markdown(f"### {row['produto']}")
 
-        qtd = st.number_input("Quantidade", min_value=0, value=int(row["quantidade"]), step=1, key=f"edit_qtd_{idx}")
-        desc = st.number_input("% Desconto", min_value=0.0, value=float(row["desconto"]), step=1.0, key=f"edit_desc_{idx}")
+        qtd = st.number_input(
+            "Quantidade",
+            min_value=0,
+            value=int(row["quantidade"]),
+            step=1,
+            key=f"edit_qtd_{idx}"
+        )
+
+        desc = st.number_input(
+            "% Desconto",
+            min_value=0.0,
+            value=float(row["desconto"]),
+            step=1.0,
+            key=f"edit_desc_{idx}"
+        )
 
         preco = float(row["preco"])
         subtotal = preco * qtd
         total = subtotal - (subtotal * desc / 100)
 
         st.write(f"Total: **{dinheiro(total)}**")
+
         excluir = st.checkbox("Excluir item", key=f"excluir_{idx}")
 
         if not excluir and qtd > 0:
@@ -895,8 +1538,8 @@ def editar_pedido():
 
 
 def comissao_tela():
-    topo("Comissão", "Resumo da comissão")
-    abrir()
+    topo("Comissão", "Resumo da comissão", mostrar_hero=True)
+    abrir(sobrepor=True)
 
     pedidos = ler_excel(ARQ_PEDIDOS)
     vendedor = st.session_state.get("nome", "")
@@ -915,12 +1558,14 @@ def comissao_tela():
             <div class="metric-value">{dinheiro(vendas)}</div>
             <div class="metric-sub">Total vendido</div>
         </div>
+
         <div class="metric-card">
             <div class="metric-icon">%</div>
             <div class="metric-title">COMISSÃO</div>
             <div class="metric-value">{dinheiro(comissao)}</div>
             <div class="metric-sub">Comissão 7%</div>
         </div>
+
         <div class="metric-card">
             <div class="metric-icon">🎯</div>
             <div class="metric-title">META</div>
@@ -934,8 +1579,8 @@ def comissao_tela():
 
 
 def mais_tela():
-    topo("Mais", "Outras opções")
-    abrir()
+    topo("Mais", "Outras opções", mostrar_hero=True)
+    abrir(sobrepor=True)
 
     st.markdown('<div class="box">', unsafe_allow_html=True)
     st.write(f"**Usuário:** {st.session_state.get('nome')}")
@@ -948,6 +1593,10 @@ def mais_tela():
 
     fechar()
 
+
+# =========================================================
+# APP
+# =========================================================
 
 criar_banco()
 css()
