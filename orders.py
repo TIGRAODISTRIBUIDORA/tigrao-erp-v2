@@ -127,6 +127,20 @@ def _add_item_to_cart(product, quantity, discount):
     })
 
 
+def _recalcular_item(index):
+    item = st.session_state.carrinho[index]
+
+    quantidade = int(item.get("quantidade", 0))
+    preco = _safe_float(item.get("preco", 0))
+    desconto = _safe_float(item.get("desconto", 0))
+
+    subtotal = preco * quantidade
+    total = subtotal - (subtotal * desconto / 100)
+
+    st.session_state.carrinho[index]["subtotal"] = subtotal
+    st.session_state.carrinho[index]["total"] = total
+
+
 def _mobile_css_orders():
     st.markdown("""
     <style>
@@ -199,44 +213,60 @@ def _mobile_css_orders():
         margin-top: 4px !important;
     }
 
-    .cart-card {
+    .cart-table-box {
         background: #ffffff !important;
         border: 1px solid #e5e7eb !important;
         border-radius: 18px !important;
-        padding: 14px !important;
+        padding: 12px !important;
         margin: 12px 0 !important;
         box-shadow: 0 4px 14px rgba(15,23,42,.08) !important;
     }
 
-    .cart-title {
-        color: #0b8de3 !important;
-        font-size: 16px !important;
-        font-weight: 1000 !important;
-        margin-bottom: 6px !important;
-    }
-
-    .cart-grid {
+    .cart-header {
         display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-        margin-top: 10px !important;
+        grid-template-columns: 42px 1fr 48px 70px 58px 80px !important;
+        gap: 6px !important;
+        padding: 8px 4px !important;
+        border-bottom: 2px solid #e5e7eb !important;
+        font-size: 11px !important;
+        font-weight: 1000 !important;
+        color: #111827 !important;
     }
 
-    .cart-mini {
-        background: #f8fafc !important;
-        border-radius: 12px !important;
-        padding: 9px !important;
-        border: 1px solid #e5e7eb !important;
+    .cart-row {
+        display: grid !important;
+        grid-template-columns: 42px 1fr 48px 70px 58px 80px !important;
+        gap: 6px !important;
+        align-items: center !important;
+        padding: 9px 4px !important;
+        border-bottom: 1px solid #e5e7eb !important;
         font-size: 12px !important;
         font-weight: 800 !important;
-        color: #475569 !important;
+        color: #111827 !important;
     }
 
-    .cart-mini b {
-        display: block !important;
-        font-size: 14px !important;
-        color: #111827 !important;
+    .cart-product {
+        color: #0b8de3 !important;
+        font-weight: 1000 !important;
+        line-height: 1.25 !important;
+        word-break: break-word !important;
+    }
+
+    .cart-code {
+        font-size: 10px !important;
+        color: #64748b !important;
+        font-weight: 800 !important;
         margin-top: 3px !important;
+    }
+
+    .trash-btn {
+        text-align: center !important;
+        font-size: 20px !important;
+    }
+
+    .cart-value {
+        font-weight: 900 !important;
+        color: #111827 !important;
     }
 
     .resumo-pedido {
@@ -377,42 +407,82 @@ def show_new_order() -> None:
         discount_general = 0
 
     else:
-        cart = pd.DataFrame(st.session_state.carrinho)
-
-        subtotal_general = cart["subtotal"].sum()
-        total_general = cart["total"].sum()
-        discount_general = subtotal_general - total_general
+        st.markdown("""
+        <div class="cart-table-box">
+            <div class="cart-header">
+                <div>🗑</div>
+                <div>Produto</div>
+                <div>Qtd</div>
+                <div>Unit.</div>
+                <div>Desc.</div>
+                <div>Total</div>
+            </div>
+        """, unsafe_allow_html=True)
 
         for i, item in enumerate(st.session_state.carrinho):
-            produto_nome = str(item.get("produto", ""))
             codigo = str(item.get("codigo", ""))
-            unidade = str(item.get("un", "UN"))
-            quantidade = item.get("quantidade", 0)
+            produto_nome = str(item.get("produto", ""))
+            quantidade = int(item.get("quantidade", 0))
             preco = _safe_float(item.get("preco", 0))
             desconto = _safe_float(item.get("desconto", 0))
             total = _safe_float(item.get("total", 0))
 
-            html = f"""
-<div class="cart-card">
-    <div class="cart-title">{produto_nome}</div>
-    <div class="produto-info">Código: {codigo} | Unidade: {unidade}</div>
-    <div class="cart-grid">
-        <div class="cart-mini">Qtd<b>{quantidade}</b></div>
-        <div class="cart-mini">Preço<b>{money(preco)}</b></div>
-        <div class="cart-mini">Desconto<b>{desconto:.2f}%</b></div>
-        <div class="cart-mini">Total<b>{money(total)}</b></div>
-    </div>
-</div>
-"""
-            st.markdown(html, unsafe_allow_html=True)
+            col_lixeira, col_produto, col_qtd, col_preco, col_desc, col_total = st.columns(
+                [0.45, 2.5, 0.8, 1.1, 0.9, 1.2]
+            )
 
-            if st.button(
-                f"🗑️ Remover item {i + 1}",
-                key=f"remover_item_{i}",
-                use_container_width=True
-            ):
-                st.session_state.carrinho.pop(i)
+            with col_lixeira:
+                if st.button("🗑", key=f"remover_item_{i}", help="Remover produto"):
+                    st.session_state.carrinho.pop(i)
+                    st.rerun()
+
+            with col_produto:
+                st.markdown(
+                    f"""
+                    <div class="cart-product">{produto_nome}</div>
+                    <div class="cart-code">Cód: {codigo}</div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            with col_qtd:
+                nova_qtd = st.number_input(
+                    "Qtd",
+                    min_value=0,
+                    value=quantidade,
+                    step=1,
+                    key=f"cart_qtd_{i}",
+                    label_visibility="collapsed"
+                )
+
+            with col_preco:
+                st.markdown(f"<div class='cart-value'>{money(preco)}</div>", unsafe_allow_html=True)
+
+            with col_desc:
+                novo_desc = st.number_input(
+                    "Desc",
+                    min_value=0.0,
+                    value=desconto,
+                    step=1.0,
+                    key=f"cart_desc_{i}",
+                    label_visibility="collapsed"
+                )
+
+            with col_total:
+                st.markdown(f"<div class='cart-value'>{money(total)}</div>", unsafe_allow_html=True)
+
+            if nova_qtd != quantidade or novo_desc != desconto:
+                st.session_state.carrinho[i]["quantidade"] = nova_qtd
+                st.session_state.carrinho[i]["desconto"] = novo_desc
+                _recalcular_item(i)
                 st.rerun()
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        cart = pd.DataFrame(st.session_state.carrinho)
+        subtotal_general = cart["subtotal"].sum()
+        total_general = cart["total"].sum()
+        discount_general = subtotal_general - total_general
 
     st.markdown(f"""
     <div class="resumo-pedido">
