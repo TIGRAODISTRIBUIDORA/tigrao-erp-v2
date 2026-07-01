@@ -164,6 +164,39 @@ def aplicar_app_mobile():
         color: #111827 !important;
     }
 
+    /* CORREÇÃO DA LISTA ABERTA NO CELULAR */
+    div[data-baseweb="popover"] {
+        background: white !important;
+        color: #111827 !important;
+        z-index: 999999 !important;
+    }
+
+    div[data-baseweb="popover"] * {
+        background: white !important;
+        color: #111827 !important;
+    }
+
+    ul[role="listbox"] {
+        background: white !important;
+        color: #111827 !important;
+        border-radius: 16px !important;
+        border: 2px solid #cbd5e1 !important;
+    }
+
+    li[role="option"] {
+        background: white !important;
+        color: #111827 !important;
+        font-size: 16px !important;
+        font-weight: 800 !important;
+        padding: 14px !important;
+    }
+
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {
+        background: #fff7ed !important;
+        color: #111827 !important;
+    }
+
     label, p, span, h1, h2, h3, h4, h5, h6 {
         color: #111827 !important;
         font-weight: 800;
@@ -293,10 +326,7 @@ else:
         mudar_menu("Início")
 
     if menu == "Dashboard":
-        topo_app("Dashboard", "Visão geral da operação")
-        abrir_card()
         show_dashboard()
-        fechar_card()
 
     elif menu == "Novo Pedido":
         topo_app("Novo Pedido", "Lançamento rápido de pedidos")
